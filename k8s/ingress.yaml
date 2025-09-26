@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clockit-ingress
+  labels:
+    app: clockit
+  annotations:
+    # Enable SSL redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Use cert-manager for automatic SSL certificates
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Security headers
+    nginx.ingress.kubernetes.io/server-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+spec:
+  tls:
+  - hosts:
+    - clockit.yourdomain.com
+    secretName: clockit-tls
+  rules:
+  - host: clockit.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: clockit-service-internal
+            port:
+              number: 8000
+---
+# Alternative ingress for development/staging without SSL
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clockit-ingress-dev
+  labels:
+    app: clockit
+    environment: development
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: clockit-dev.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: clockit-service-internal
+            port:
+              number: 8000
