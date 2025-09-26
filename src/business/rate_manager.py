@@ -3,6 +3,7 @@ Rate management business logic
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict
 
@@ -12,6 +13,7 @@ class RateManager:
     def __init__(self, data_dir: Path):
         self.data_dir = data_dir
         self.rates_file = data_dir / "rates_config.json"
+        self.logger = logging.getLogger(self.__class__.__name__)
     
     def load_rates(self) -> Dict[str, float]:
         """Load rates from storage"""
@@ -20,7 +22,7 @@ class RateManager:
                 with open(self.rates_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Error loading rates: {e}")
+                self.logger.exception("Error loading rates: %s", e)
         return {}
     
     def save_rates(self, rates: Dict[str, float]) -> bool:

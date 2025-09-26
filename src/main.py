@@ -13,15 +13,20 @@ from pydantic import BaseModel
 from ms_planner_integration import PlannerConfig, MSPlannerClient, sync_planner_tasks
 from version import get_version_string, get_full_version_info
 from logging_config import configure_logging
+from config import Config
 import logging
 
-# Get data directory from environment or use default
-DATA_DIR = Path(os.environ.get('CLOCKIT_DATA_DIR', './clockit_data'))
-DATA_DIR.mkdir(exist_ok=True)
+# Validate and configure application
+if not Config.validate():
+    print("Configuration validation failed. Check logs for details.")
+    exit(1)
 
 # Configure logging early
 configure_logging()
 logger = logging.getLogger(__name__)
+
+# Use configuration for data directory
+DATA_DIR = Config.DATA_DIR
 
 INVOICE_COLUMNS_FILE = DATA_DIR / "invoice_columns.json"
 DEFAULT_INVOICE_COLUMNS = ["Task", "Total Hours", "Day Rate", "Hour Rate", "Amount"]
@@ -2211,6 +2216,27 @@ async def sync_planner_tasks_endpoint():
         raise HTTPException(status_code=500, detail=f"Failed to sync with Planner: {str(e)}")
 
 # System Control Endpoints
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for container orchestration"""
+    try:
+        # Basic health checks
+        data_dir_accessible = DATA_DIR.exists() and DATA_DIR.is_dir()
+        
+        # Check if we can load tasks (basic functionality test)
+        tasks_data = load_tasks_data()
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": get_version_string(),
+            "data_directory_accessible": data_dir_accessible,
+            "tasks_loadable": bool(tasks_data)
+        }
+    except Exception as e:
+        logger.exception("Health check failed")
+        raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+
 @app.get("/system/data-location")
 async def get_data_location():
     """Get the data storage location"""
@@ -2242,4 +2268,9 @@ async def shutdown_application():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(
+        app, 
+        host=Config.HOST, 
+        port=Config.PORT,
+        log_level=Config.LOG_LEVEL.lower()
+    )

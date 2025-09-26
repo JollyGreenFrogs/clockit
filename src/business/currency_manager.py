@@ -3,6 +3,7 @@ Currency management business logic
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict
 
@@ -12,6 +13,7 @@ class CurrencyManager:
     def __init__(self, data_dir: Path):
         self.data_dir = data_dir
         self.currency_file = data_dir / "currency_config.json"
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.default_currency = {
             "code": "USD",
             "symbol": "$",
@@ -25,7 +27,7 @@ class CurrencyManager:
                 with open(self.currency_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Error loading currency config: {e}")
+                self.logger.exception("Error loading currency config: %s", e)
         return self.default_currency.copy()
     
     def save_currency_config(self, currency_config: Dict) -> bool:
@@ -35,7 +37,7 @@ class CurrencyManager:
                 json.dump(currency_config, f, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving currency config: {e}")
+            self.logger.exception("Error saving currency config: %s", e)
             return False
     
     def set_currency(self, code: str, symbol: str, name: str) -> bool:
