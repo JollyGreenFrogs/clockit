@@ -5,6 +5,7 @@ Task management business logic
 import json
 import os
 from datetime import datetime
+import logging
 from typing import Dict, List, Optional
 from pathlib import Path
 
@@ -15,6 +16,7 @@ class TaskManager:
         self.data_dir = data_dir
         self.tasks_file = data_dir / "tasks_data.json"
         self.exported_file = data_dir / "exported_tasks.json"
+        self.logger = logging.getLogger(self.__class__.__name__)
     
     def load_tasks(self) -> Dict:
         """Load tasks from storage"""
@@ -23,7 +25,7 @@ class TaskManager:
                 with open(self.tasks_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Error loading tasks: {e}")
+                self.logger.exception("Error loading tasks: %s", e)
         return {"tasks": {}}
     
     def save_tasks(self, tasks_data: Dict) -> bool:
@@ -33,7 +35,7 @@ class TaskManager:
                 json.dump(tasks_data, f, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving tasks: {e}")
+            self.logger.exception("Error saving tasks: %s", e)
             return False
     
     def create_task(self, name: str, description: str = "", parent_heading: str = "") -> Dict:
@@ -110,7 +112,7 @@ class TaskManager:
                 with open(self.exported_file, 'r') as f:
                     return json.load(f)
             except Exception:
-                pass
+                self.logger.exception("Error loading exported tasks")
         return {"exported_task_ids": []}
     
     def save_exported_tasks(self, exported_data: Dict) -> bool:
@@ -120,5 +122,5 @@ class TaskManager:
                 json.dump(exported_data, f, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving exported tasks: {e}")
+            self.logger.exception("Error saving exported tasks: %s", e)
             return False

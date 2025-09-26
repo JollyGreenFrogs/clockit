@@ -12,10 +12,16 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ms_planner_integration import PlannerConfig, MSPlannerClient, sync_planner_tasks
 from version import get_version_string, get_full_version_info
+from logging_config import configure_logging
+import logging
 
 # Get data directory from environment or use default
 DATA_DIR = Path(os.environ.get('CLOCKIT_DATA_DIR', './clockit_data'))
 DATA_DIR.mkdir(exist_ok=True)
+
+# Configure logging early
+configure_logging()
+logger = logging.getLogger(__name__)
 
 INVOICE_COLUMNS_FILE = DATA_DIR / "invoice_columns.json"
 DEFAULT_INVOICE_COLUMNS = ["Task", "Total Hours", "Day Rate", "Hour Rate", "Amount"]
@@ -24,67 +30,37 @@ RATES_CONFIG_FILE = DATA_DIR / "rates_config.json"
 EXPORTED_TASKS_FILE = DATA_DIR / "exported_tasks.json"
 CURRENCY_CONFIG_FILE = DATA_DIR / "currency_config.json"
 
-# Initialization function to ensure all required files exist
-def initialize_application():
-    """Initialize the application by creating necessary directories and default files"""
-    print(f"🚀 Initializing ClockIt...")
-    print(f"📁 Data directory: {DATA_DIR}")
-    
+def initialize_application() -> None:
+    """Initialize the application by creating necessary directories and default files.
+
+    This implementation uses the configured logger instead of printing to stdout
+    and is idempotent.
+    """
+    logger.info("Initializing ClockIt; data directory=%s", DATA_DIR)
+
     # Ensure data directory exists
-    DATA_DIR.mkdir(exist_ok=True)
-    
-    # Initialize invoice columns file if it doesn't exist
-    if not INVOICE_COLUMNS_FILE.exists():
-        print("📋 Creating default invoice columns configuration...")
-        try:
-            with open(INVOICE_COLUMNS_FILE, 'w') as f:
-                json.dump(DEFAULT_INVOICE_COLUMNS, f, indent=2)
-            print(f"✅ Created: {INVOICE_COLUMNS_FILE}")
-        except Exception as e:
-            print(f"❌ Error creating invoice columns file: {e}")
-    
-    # Initialize tasks data file if it doesn't exist
-    if not TASKS_DATA_FILE.exists():
-        print("📝 Creating default tasks data file...")
-        try:
-            with open(TASKS_DATA_FILE, 'w') as f:
-                json.dump({"tasks": {}}, f, indent=2)
-            print(f"✅ Created: {TASKS_DATA_FILE}")
-        except Exception as e:
-            print(f"❌ Error creating tasks data file: {e}")
-    
-    # Initialize rates config file if it doesn't exist
-    if not RATES_CONFIG_FILE.exists():
-        print("💰 Creating default rates configuration...")
-        try:
-            with open(RATES_CONFIG_FILE, 'w') as f:
-                json.dump({}, f, indent=2)
-            print(f"✅ Created: {RATES_CONFIG_FILE}")
-        except Exception as e:
-            print(f"❌ Error creating rates config file: {e}")
-    
-    # Initialize exported tasks file if it doesn't exist
-    if not EXPORTED_TASKS_FILE.exists():
-        print("📤 Creating default exported tasks file...")
-        try:
-            with open(EXPORTED_TASKS_FILE, 'w') as f:
-                json.dump({"exported_task_ids": []}, f, indent=2)
-            print(f"✅ Created: {EXPORTED_TASKS_FILE}")
-        except Exception as e:
-            print(f"❌ Error creating exported tasks file: {e}")
-    
-    # Initialize currency config file if it doesn't exist
-    if not CURRENCY_CONFIG_FILE.exists():
-        print("💱 Creating default currency configuration...")
-        try:
-            with open(CURRENCY_CONFIG_FILE, 'w') as f:
-                json.dump(DEFAULT_CURRENCY, f, indent=2)
-            print(f"✅ Created: {CURRENCY_CONFIG_FILE}")
-        except Exception as e:
-            print(f"❌ Error creating currency config file: {e}")
-    
-    print("🎉 Application initialization complete!")
-    print("=" * 60)
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        logger.exception("Could not create data directory %s; falling back to cwd", DATA_DIR)
+
+    def _ensure_file(path: Path, default_content) -> None:
+        if not path.exists():
+            logger.debug("Creating default: %s", path)
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    json.dump(default_content, f, indent=2)
+                logger.info("Created: %s", path)
+            except Exception:
+                logger.exception("Error creating file: %s", path)
+
+    _ensure_file(INVOICE_COLUMNS_FILE, DEFAULT_INVOICE_COLUMNS)
+    _ensure_file(TASKS_DATA_FILE, {"tasks": {}})
+    _ensure_file(RATES_CONFIG_FILE, {})
+    _ensure_file(EXPORTED_TASKS_FILE, {"exported_task_ids": []})
+    _ensure_file(CURRENCY_CONFIG_FILE, DEFAULT_CURRENCY)
+
+    logger.info("Application initialization complete")
 
 # Default currency settings
 DEFAULT_CURRENCY = {
@@ -268,69 +244,69 @@ def load_tasks_data():
     return {"tasks": {}}
 
 # Save tasks data
-def save_tasks_data(data):
-    try:
-        with open(TASKS_DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving tasks data: {e}")
+def initialize_application():
+    """Initialize the application by creating necessary directories and default files.
 
-# Load rates config
-def load_rates_config():
-    if os.path.exists(RATES_CONFIG_FILE):
+    Uses structured logging instead of printing to stdout.
+    """
+    logger.info("Initializing ClockIt...")
+    logger.info("Data directory: %s", DATA_DIR)
+
+    # Ensure data directory exists
+    DATA_DIR.mkdir(exist_ok=True)
+
+    # Initialize invoice columns file if it doesn't exist
+    if not INVOICE_COLUMNS_FILE.exists():
+        logger.info("Creating default invoice columns configuration...")
         try:
-            with open(RATES_CONFIG_FILE, 'r') as f:
-                return json.load(f)
+            with open(INVOICE_COLUMNS_FILE, 'w') as f:
+                json.dump(DEFAULT_INVOICE_COLUMNS, f, indent=2)
+            logger.info("Created: %s", INVOICE_COLUMNS_FILE)
         except Exception as e:
-            print(f"Error loading rates config: {e}")
-    return {}
+            logger.exception("Error creating invoice columns file: %s", e)
 
-# Save rates config
-def save_rates_config(rates):
-    try:
-        with open(RATES_CONFIG_FILE, 'w') as f:
-            json.dump(rates, f, indent=2)
-    except Exception as e:
-        print(f"Error saving rates config: {e}")
-
-# Load exported tasks tracking
-def load_exported_tasks():
-    if os.path.exists(EXPORTED_TASKS_FILE):
+    # Initialize tasks data file if it doesn't exist
+    if not TASKS_DATA_FILE.exists():
+        logger.info("Creating default tasks data file...")
         try:
-            with open(EXPORTED_TASKS_FILE, 'r') as f:
-                return json.load(f)
+            with open(TASKS_DATA_FILE, 'w') as f:
+                json.dump({"tasks": {}}, f, indent=2)
+            logger.info("Created: %s", TASKS_DATA_FILE)
         except Exception as e:
-            print(f"Error loading exported tasks: {e}")
-    return {"exported_task_ids": []}
+            logger.exception("Error creating tasks data file: %s", e)
 
-# Save exported tasks tracking
-def save_exported_tasks(exported_data):
-    try:
-        with open(EXPORTED_TASKS_FILE, 'w') as f:
-            json.dump(exported_data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving exported tasks: {e}")
-
-# Load currency configuration
-def load_currency_config():
-    if os.path.exists(CURRENCY_CONFIG_FILE):
+    # Initialize rates config file if it doesn't exist
+    if not RATES_CONFIG_FILE.exists():
+        logger.info("Creating default rates configuration...")
         try:
-            with open(CURRENCY_CONFIG_FILE, 'r') as f:
-                config = json.load(f)
-                # Validate currency exists in our list
-                if config.get('code') in CURRENCIES:
-                    return config
+            with open(RATES_CONFIG_FILE, 'w') as f:
+                json.dump({}, f, indent=2)
+            logger.info("Created: %s", RATES_CONFIG_FILE)
         except Exception as e:
-            print(f"Error loading currency config: {e}")
-    return DEFAULT_CURRENCY.copy()
+            logger.exception("Error creating rates config file: %s", e)
 
-# Save currency configuration
-def save_currency_config(currency_config):
-    try:
-        with open(CURRENCY_CONFIG_FILE, 'w') as f:
-            json.dump(currency_config, f, indent=2)
-    except Exception as e:
-        print(f"Error saving currency config: {e}")
+    # Initialize exported tasks file if it doesn't exist
+    if not EXPORTED_TASKS_FILE.exists():
+        logger.info("Creating default exported tasks file...")
+        try:
+            with open(EXPORTED_TASKS_FILE, 'w') as f:
+                json.dump({"exported_task_ids": []}, f, indent=2)
+            logger.info("Created: %s", EXPORTED_TASKS_FILE)
+        except Exception as e:
+            logger.exception("Error creating exported tasks file: %s", e)
+
+    # Initialize currency config file if it doesn't exist
+    if not CURRENCY_CONFIG_FILE.exists():
+        logger.info("Creating default currency configuration...")
+        try:
+            with open(CURRENCY_CONFIG_FILE, 'w') as f:
+                json.dump(DEFAULT_CURRENCY, f, indent=2)
+            logger.info("Created: %s", CURRENCY_CONFIG_FILE)
+        except Exception as e:
+            logger.exception("Error creating currency config file: %s", e)
+
+    logger.info("Application initialization complete")
+    logger.info("%s", "=" * 60)
 
 # Get current currency info
 def get_current_currency():
