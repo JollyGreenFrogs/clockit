@@ -14,6 +14,10 @@ from ms_planner_integration import PlannerConfig, MSPlannerClient, sync_planner_
 from version import get_version_string, get_full_version_info
 from logging_config import configure_logging
 from config import Config
+from business.task_manager import TaskManager
+from business.rate_manager import RateManager
+from business.currency_manager import CurrencyManager
+from business.invoice_manager import InvoiceManager
 import logging
 
 # Validate and configure application
@@ -27,6 +31,12 @@ logger = logging.getLogger(__name__)
 
 # Use configuration for data directory
 DATA_DIR = Config.DATA_DIR
+
+# Initialize business managers
+task_manager = TaskManager(DATA_DIR)
+rate_manager = RateManager(DATA_DIR) 
+currency_manager = CurrencyManager(DATA_DIR)
+invoice_manager = InvoiceManager(DATA_DIR)
 
 INVOICE_COLUMNS_FILE = DATA_DIR / "invoice_columns.json"
 DEFAULT_INVOICE_COLUMNS = ["Task", "Total Hours", "Day Rate", "Hour Rate", "Amount"]
@@ -222,127 +232,51 @@ class CurrencyConfig(BaseModel):
 
 # Load invoice columns config
 def load_invoice_columns():
-    if os.path.exists(INVOICE_COLUMNS_FILE):
-        try:
-            with open(INVOICE_COLUMNS_FILE, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error loading invoice columns: {e}")
-    return DEFAULT_INVOICE_COLUMNS.copy()
+    return invoice_manager.load_invoice_columns()
 
 # Save invoice columns config
 def save_invoice_columns(columns):
-    try:
-        with open(INVOICE_COLUMNS_FILE, 'w') as f:
-            json.dump(columns, f, indent=2)
-    except Exception as e:
-        print(f"Error saving invoice columns: {e}")
+    return invoice_manager.save_invoice_columns(columns)
 
 # Load tasks data
 def load_tasks_data():
-    if os.path.exists(TASKS_DATA_FILE):
-        try:
-            with open(TASKS_DATA_FILE, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error loading tasks data: {e}")
-    return {"tasks": {}}
+    return task_manager.load_tasks()
 
 # Save tasks data
-def initialize_application():
-    """Initialize the application by creating necessary directories and default files.
+def save_tasks_data(tasks_data):
+    return task_manager.save_tasks(tasks_data)
 
-    Uses structured logging instead of printing to stdout.
-    """
-    logger.info("Initializing ClockIt...")
-    logger.info("Data directory: %s", DATA_DIR)
+# Load rates config
+def load_rates_config():
+    return rate_manager.load_rates()
 
-    # Ensure data directory exists
-    DATA_DIR.mkdir(exist_ok=True)
+# Save rates config  
+def save_rates_config(rates):
+    return rate_manager.save_rates(rates)
 
-    # Initialize invoice columns file if it doesn't exist
-    if not INVOICE_COLUMNS_FILE.exists():
-        logger.info("Creating default invoice columns configuration...")
-        try:
-            with open(INVOICE_COLUMNS_FILE, 'w') as f:
-                json.dump(DEFAULT_INVOICE_COLUMNS, f, indent=2)
-            logger.info("Created: %s", INVOICE_COLUMNS_FILE)
-        except Exception as e:
-            logger.exception("Error creating invoice columns file: %s", e)
+# Load currency config
+def load_currency_config():
+    return currency_manager.load_currency_config()
 
-    # Initialize tasks data file if it doesn't exist
-    if not TASKS_DATA_FILE.exists():
-        logger.info("Creating default tasks data file...")
-        try:
-            with open(TASKS_DATA_FILE, 'w') as f:
-                json.dump({"tasks": {}}, f, indent=2)
-            logger.info("Created: %s", TASKS_DATA_FILE)
-        except Exception as e:
-            logger.exception("Error creating tasks data file: %s", e)
+# Save currency config
+def save_currency_config(config):
+    return currency_manager.save_currency_config(config)
 
-    # Initialize rates config file if it doesn't exist
-    if not RATES_CONFIG_FILE.exists():
-        logger.info("Creating default rates configuration...")
-        try:
-            with open(RATES_CONFIG_FILE, 'w') as f:
-                json.dump({}, f, indent=2)
-            logger.info("Created: %s", RATES_CONFIG_FILE)
-        except Exception as e:
-            logger.exception("Error creating rates config file: %s", e)
-
-    # Initialize exported tasks file if it doesn't exist
-    if not EXPORTED_TASKS_FILE.exists():
-        logger.info("Creating default exported tasks file...")
-        try:
-            with open(EXPORTED_TASKS_FILE, 'w') as f:
-                json.dump({"exported_task_ids": []}, f, indent=2)
-            logger.info("Created: %s", EXPORTED_TASKS_FILE)
-        except Exception as e:
-            logger.exception("Error creating exported tasks file: %s", e)
-
-    # Initialize currency config file if it doesn't exist
-    if not CURRENCY_CONFIG_FILE.exists():
-        logger.info("Creating default currency configuration...")
-        try:
-            with open(CURRENCY_CONFIG_FILE, 'w') as f:
-                json.dump(DEFAULT_CURRENCY, f, indent=2)
-            logger.info("Created: %s", CURRENCY_CONFIG_FILE)
-        except Exception as e:
-            logger.exception("Error creating currency config file: %s", e)
-
-    logger.info("Application initialization complete")
-    logger.info("%s", "=" * 60)
+# Load exported tasks
+def load_exported_tasks():
+    return task_manager.load_exported_tasks()
 
 # Get current currency info
 def get_current_currency():
-    config = load_currency_config()
-    return {
-        "code": config["code"],
-        "symbol": config["symbol"],
-        "name": config["name"]
-    }
+    return currency_manager.get_current_currency()
 
 # Format currency amount
 def format_currency(amount, currency_config=None):
-    if currency_config is None:
-        currency_config = load_currency_config()
-    
-    symbol = currency_config["symbol"]
-    
-    # Handle different currency formatting styles
-    if currency_config["code"] in ["EUR", "GBP", "CHF"]:
-        # European style: symbol after amount
-        return f"{amount:.2f} {symbol}"
-    elif currency_config["code"] in ["JPY", "KRW", "VND"]:
-        # No decimal places for some currencies
-        return f"{symbol}{amount:.0f}"
-    else:
-        # Default: symbol before amount
-        return f"{symbol}{amount:.2f}"
+    return currency_manager.format_currency(amount, currency_config)
 
 # Calculate hourly rate from day rate (assuming 8 hour work day)
 def calculate_hourly_rate(day_rate):
-    return day_rate / 8.0
+    return rate_manager.calculate_hourly_rate(day_rate)
 
 
 
@@ -1948,6 +1882,11 @@ async def delete_rate(task_type: str):
 async def get_currency():
     """Get current currency configuration"""
     return get_current_currency()
+
+@app.get("/currencies")
+async def get_currencies():
+    """Get list of all available currencies"""
+    return CURRENCIES
 
 @app.get("/currency/available")
 async def get_available_currencies():
