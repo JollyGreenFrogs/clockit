@@ -1,33 +1,167 @@
-# ClockIt - Time Tracker
+# ClockIt - Professional Time Tracker
 
-A simple time tracking application built with FastAPI that allows you to track time spent on projects, tasks, features, and issues.
+A modern, cloud-ready time tracking application built with FastAPI. Track time spent on projects, generate invoices, and integrate with Microsoft Planner.
 
-## Features
+## ✨ Features
 
-- ✅ Create tasks/features/issues with names and descriptions
-- ⏱️ Start and pause timers for different tasks
-- 🔄 Only one timer can run at a time (automatically pauses others)
-- ⏰ 2-hour alert reminder when a timer has been running continuously
-- 📊 View total time spent in HH:MM format
-- 💾 Persistent data storage (JSON file)
-- 🗑️ Delete tasks when no longer needed
-- 📈 Detailed time reports for each task
-- 📥 **NEW**: Import tasks from Microsoft Planner
-- 🔄 **NEW**: Sync with Microsoft 365 Planner tasks
+- ⏱️ **Time Tracking**: Start/pause timers with automatic single-timer management
+- 📋 **Task Management**: Organize tasks with categories and descriptions
+- 💰 **Multi-Currency Support**: Invoice generation with 100+ currencies
+- 📄 **Invoice Generation**: Professional invoices with export tracking
+- 🔗 **Microsoft Planner Integration**: Sync tasks from Microsoft 365
+- 🏗️ **Cloud-Ready**: Docker and Kubernetes deployment support
+- 🛡️ **Production Ready**: Health checks, structured logging, and security best practices
+- 💾 **Flexible Storage**: File-based (development) or PostgreSQL (production)
 
-## Installation
+## 🚀 Quick Start
 
-1. Install dependencies:
+### Local Development
+
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd clockit
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the application
+python src/main.py
 ```
 
-## Running the Application
+Access the application at http://localhost:8000
 
-1. Start the FastAPI server:
+### Docker Development
+
 ```bash
-python main.py
+# Using Docker Compose (recommended)
+docker-compose up -d
+
+# Or build and run manually
+docker build -t clockit .
+docker run -p 8000:8000 clockit
 ```
+
+### Production Deployment
+
+For production deployment to cloud platforms, see [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive guides covering:
+- Kubernetes clusters
+- AWS ECS/Fargate
+- Google Cloud Run
+- Azure Container Instances
+- Docker Swarm
+
+## 📁 Project Structure
+
+```
+clockit/
+├── src/                    # Application source code
+│   ├── business/          # Business logic managers
+│   ├── config.py          # Configuration management
+│   ├── main.py           # FastAPI application
+│   └── ...
+├── k8s/                   # Kubernetes deployment manifests
+├── tests/                 # Test suite
+├── Dockerfile            # Multi-stage container build
+├── docker-compose.yml    # Development environment
+├── DEPLOYMENT.md         # Cloud deployment guide
+├── PLANNER_SETUP.md      # Microsoft Planner integration
+└── .env.example          # Environment configuration template
+```
+
+## ⚙️ Configuration
+
+The application uses environment-based configuration. Copy `.env.example` to `.env` and customize:
+
+```bash
+# Application settings
+ENVIRONMENT=development
+DATABASE_TYPE=file
+CLOCKIT_DATA_DIR=./clockit_data
+
+# For production with PostgreSQL
+DATABASE_TYPE=postgres
+POSTGRES_HOST=your-db-host
+POSTGRES_PASSWORD=your-password
+SECRET_KEY=your-secret-key
+```
+
+## 🔌 API Endpoints
+
+### Core Operations
+- `GET /` - Web interface
+- `GET /health` - Health check for monitoring
+- `GET /tasks` - List all tasks
+- `POST /tasks` - Create new task
+- `POST /tasks/{id}/time` - Add time entry
+
+### Invoice & Reporting
+- `GET /invoice/preview` - Preview invoice
+- `POST /invoice/generate` - Generate and export invoice
+- `GET /categories` - Get task categories
+- `GET /rates` - Get billing rates
+
+### System
+- `GET /system/data-location` - Data storage info
+- `POST /system/shutdown` - Graceful shutdown
+
+## 🧪 Testing
+
+```bash
+# Run tests
+pytest
+
+# Run specific test file
+pytest tests/test_config.py
+
+# Run with coverage
+pytest --cov=src tests/
+```
+
+## 🏗️ Cloud Deployment
+
+ClockIt is designed for cloud deployment with:
+
+- **Docker containerization** with multi-stage builds
+- **Kubernetes manifests** with scaling and monitoring
+- **Health checks** for container orchestration
+- **Environment-based configuration** for different deployment stages
+- **Database abstraction** supporting both file and PostgreSQL storage
+- **Security best practices** with non-root containers and secret management
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
+## 📊 Microsoft Planner Integration
+
+Sync tasks from Microsoft 365 Planner:
+
+1. Set up Azure AD app registration
+2. Configure API permissions
+3. Add credentials to environment variables
+4. Use the sync endpoint to import tasks
+
+See [PLANNER_SETUP.md](PLANNER_SETUP.md) for detailed setup instructions.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For deployment issues and questions:
+1. Check the health endpoint: `/health`
+2. Review application logs
+3. Consult [DEPLOYMENT.md](DEPLOYMENT.md) for troubleshooting
+4. Open an issue on GitHub
 
 Or use uvicorn directly:
 ```bash

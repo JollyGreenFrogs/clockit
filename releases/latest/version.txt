@@ -1,5 +1,0 @@
-ClockIt Version: 1.0.1
-Build Date: 2025-08-06
-Author: ClockIt Development Team
-Description: Professional Time Tracking & Invoice Generation
-Built on: 2025-08-06 07:51:44
