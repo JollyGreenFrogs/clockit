@@ -147,8 +147,8 @@ def test_invoice_preview_endpoint(client, temp_data_dir):
     assert response.status_code == 200
     
     data = response.json()
-    assert "invoice_data" in data
-    assert "summary" in data
+    assert "invoice" in data
+    assert "message" in data
 
 
 @pytest.mark.parametrize("endpoint", [
