@@ -1,0 +1,80 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Build artifacts
+build/
+dist/
+*.egg-info
+releases/
+electron/
+
+# Local data and config
+clockit_data/
+*.json
+!planner_config_sample.json
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Development and build files
+BUILD_*.md
+COMPILATION_*.md
+DEVELOPMENT.md
+DISTRIBUTION_*.md
+WINDOWS_*.md
+build*.py
+build*.bat
+build*.sh
+start_*.sh
+start_*.bat
+create_*.bat
+test_*.sh
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+tests/
+.pytest_cache
+.coverage
