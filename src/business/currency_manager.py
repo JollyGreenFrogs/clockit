@@ -2,17 +2,21 @@
 Currency management business logic
 """
 
-import json
 import logging
-from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from database.connection import get_db
+from database.repositories import ConfigRepository
 
 class CurrencyManager:
     """Handles all currency-related business operations"""
     
-    def __init__(self, data_dir: Path):
-        self.data_dir = data_dir
-        self.currency_file = data_dir / "currency_config.json"
+    def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.default_currency = {
             "code": "USD",
@@ -20,22 +24,26 @@ class CurrencyManager:
             "name": "US Dollar"
         }
     
+    def _get_config_repo(self) -> ConfigRepository:
+        """Get config repository with database session"""
+        db = next(get_db())
+        return ConfigRepository(db)
+    
     def load_currency_config(self) -> Dict:
-        """Load currency configuration from storage"""
-        if self.currency_file.exists():
-            try:
-                with open(self.currency_file, 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                self.logger.exception("Error loading currency config: %s", e)
-        return self.default_currency.copy()
+        """Load currency configuration from database"""
+        try:
+            config_repo = self._get_config_repo()
+            config = config_repo.get_config("currency")
+            return config if config else self.default_currency.copy()
+        except Exception as e:
+            self.logger.exception("Error loading currency config: %s", e)
+            return self.default_currency.copy()
     
     def save_currency_config(self, currency_config: Dict) -> bool:
-        """Save currency configuration to storage"""
+        """Save currency configuration to database"""
         try:
-            with open(self.currency_file, 'w') as f:
-                json.dump(currency_config, f, indent=2)
-            return True
+            config_repo = self._get_config_repo()
+            return config_repo.save_config("currency", currency_config)
         except Exception as e:
             self.logger.exception("Error saving currency config: %s", e)
             return False

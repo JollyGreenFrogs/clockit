@@ -14,15 +14,15 @@ from .currency_manager import CurrencyManager
 class InvoiceManager:
     """Handles invoice generation and export logic"""
     
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path, task_manager: TaskManager):
         self.data_dir = data_dir
         self.columns_file = data_dir / "invoice_columns.json"
         self.default_columns = ["Task", "Total Hours", "Day Rate", "Hour Rate", "Amount"]
         self.logger = logging.getLogger(self.__class__.__name__)
         
-        self.task_manager = TaskManager(data_dir)
+        self.task_manager = task_manager
         self.rate_manager = RateManager(data_dir)
-        self.currency_manager = CurrencyManager(data_dir)
+        self.currency_manager = CurrencyManager()
     
     def load_invoice_columns(self) -> List[str]:
         """Load invoice column configuration"""
