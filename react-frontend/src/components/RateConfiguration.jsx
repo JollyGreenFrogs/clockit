@@ -40,12 +40,8 @@ function RateConfiguration() {
       setCurrencies(data.currencies || [])
     } catch (error) {
       console.error('Error loading currencies:', error)
-      // Set some fallback currencies for development
-      setCurrencies([
-        { code: 'USD', symbol: '$', name: 'US Dollar' },
-        { code: 'EUR', symbol: '€', name: 'Euro' },
-        { code: 'GBP', symbol: '£', name: 'British Pound' }
-      ])
+      // No fallback currencies - show error state instead
+      setCurrencies([])
     }
   }
 

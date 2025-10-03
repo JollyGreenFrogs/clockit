@@ -208,12 +208,21 @@ class AuthService:
     
     def _set_default_currency(self, user_id: str):
         """Set default currency for new user"""
-        from database.repositories import ConfigRepository
+        from database.repositories import ConfigRepository, CurrencyRepository
         
         try:
             config_repo = ConfigRepository(self.db)
-            default_currency = {"code": "USD", "symbol": "$", "name": "US Dollar"}
-            config_repo.save_config("currency", default_currency, user_id)
+            currency_repo = CurrencyRepository(self.db)
+            
+            # Get USD from database instead of hardcoding
+            default_currency = currency_repo.get_currency_by_code("USD")
+            if not default_currency:
+                # Fallback to first available currency if USD not found
+                all_currencies = currency_repo.get_all_currencies()
+                default_currency = all_currencies[0] if all_currencies else None
+            
+            if default_currency:
+                config_repo.save_config("currency", default_currency, user_id)
         except Exception as e:
             # Don't fail user creation if currency setting fails
             print(f"Warning: Failed to set default currency for user {user_id}: {e}")

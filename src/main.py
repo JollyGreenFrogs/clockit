@@ -48,14 +48,13 @@ if not init_database():
 
 logger.info("Database initialized successfully")
 
-# Use configuration for data directory (legacy support)
+# Use configuration for data directory (legacy support for file exports only)
 DATA_DIR = Config.DATA_DIR
 
-# Initialize business managers (updated to not require data_dir)
+# Initialize business managers (database-only)
 task_manager = TaskManager()
-rate_manager = RateManager(DATA_DIR)  # Keep file-based for now
 currency_manager = CurrencyManager()
-invoice_manager = InvoiceManager(DATA_DIR, task_manager)  # Pass task_manager instance
+invoice_manager = InvoiceManager(DATA_DIR, task_manager)  # Keep for invoice file exports
 
 def initialize_application() -> None:
     """Initialize the application by creating necessary directories.
@@ -71,13 +70,6 @@ def initialize_application() -> None:
         logger.exception("Could not create data directory %s; falling back to cwd", DATA_DIR)
 
     logger.info("Application initialization complete")
-
-# Default currency settings
-DEFAULT_CURRENCY = {
-    "code": "USD",
-    "symbol": "$",
-    "name": "US Dollar"
-}
 
 # Pydantic models for API requests
 class TimeEntry(BaseModel):
@@ -105,46 +97,6 @@ def load_invoice_columns():
 # Save invoice columns config
 def save_invoice_columns(columns):
     return invoice_manager.save_invoice_columns(columns)
-
-# Load tasks data
-def load_tasks_data():
-    return task_manager.load_tasks()
-
-# Save tasks data
-def save_tasks_data(tasks_data):
-    return task_manager.save_tasks(tasks_data)
-
-# Load rates config
-def load_rates_config():
-    return rate_manager.load_rates()
-
-# Save rates config  
-def save_rates_config(rates):
-    return rate_manager.save_rates(rates)
-
-# Load currency config
-def load_currency_config():
-    return currency_manager.load_currency_config()
-
-# Save currency config
-def save_currency_config(config):
-    return currency_manager.save_currency_config(config)
-
-# Load exported tasks
-def load_exported_tasks():
-    return task_manager.load_exported_tasks()
-
-# Get current currency info
-def get_current_currency():
-    return currency_manager.get_current_currency()
-
-# Format currency amount
-def format_currency(amount, currency_config=None):
-    return currency_manager.format_currency(amount, currency_config)
-
-# Calculate hourly rate from day rate (assuming 8 hour work day)
-def calculate_hourly_rate(day_rate):
-    return rate_manager.calculate_hourly_rate(day_rate)
 
 
 
@@ -281,60 +233,107 @@ async def add_time_entry(task_id: str, time_entry: TimeEntry, current_user: User
 
 # Rate Configuration Endpoints
 @app.get("/rates")
-async def get_rates():
-    """Get all rate configurations"""
-    return load_rates_config()
+async def get_rates(current_user: User = Depends(get_current_user)):
+    """Get all rate configurations for authenticated user"""
+    try:
+        db = next(get_db())
+        config_repo = ConfigRepository(db)
+        rates_config = config_repo.get_config("rates", str(current_user.id))
+        return rates_config or {}
+    except Exception as e:
+        logger.error(f"Failed to load rates: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load rates")
 
 @app.post("/rates")
-async def set_rate(rate_config: RateConfig):
+async def set_rate(rate_config: RateConfig, current_user: User = Depends(get_current_user)):
     """Set day rate for a task type"""
-    rates = load_rates_config()
-    rates[rate_config.task_type] = rate_config.day_rate
-    save_rates_config(rates)
-    
-    hourly_rate = calculate_hourly_rate(rate_config.day_rate)
-    currency = get_current_currency()
-    
-    return {
-        "message": f"Rate set for {rate_config.task_type}",
-        "day_rate": rate_config.day_rate,
-        "hourly_rate": hourly_rate,
-        "currency": currency
-    }
+    try:
+        db = next(get_db())
+        config_repo = ConfigRepository(db)
+        
+        # Get existing rates
+        rates = config_repo.get_config("rates", str(current_user.id)) or {}
+        rates[rate_config.task_type] = rate_config.day_rate
+        
+        # Save updated rates
+        success = config_repo.save_config("rates", rates, str(current_user.id))
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save rate configuration")
+        
+        hourly_rate = rate_config.day_rate / 8  # Assuming 8-hour workday
+        
+        # Get user's currency
+        user_currency = config_repo.get_config("currency", str(current_user.id))
+        
+        return {
+            "message": f"Rate set for {rate_config.task_type}",
+            "day_rate": rate_config.day_rate,
+            "hourly_rate": hourly_rate,
+            "currency": user_currency
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set rate: {e}")
+        raise HTTPException(status_code=500, detail="Failed to set rate")
 
 @app.put("/rates/{task_type}")
-async def update_rate(task_type: str, rate_config: RateConfig):
+async def update_rate(task_type: str, rate_config: RateConfig, current_user: User = Depends(get_current_user)):
     """Update existing rate for a task type"""
-    rates = load_rates_config()
-    
-    if task_type not in rates:
-        raise HTTPException(status_code=404, detail="Task type not found")
-    
-    rates[task_type] = rate_config.day_rate
-    save_rates_config(rates)
-    
-    hourly_rate = calculate_hourly_rate(rate_config.day_rate)
-    currency = get_current_currency()
-    
-    return {
-        "message": f"Rate updated for {task_type}",
-        "day_rate": rate_config.day_rate,
-        "hourly_rate": hourly_rate,
-        "currency": currency
-    }
+    try:
+        db = next(get_db())
+        config_repo = ConfigRepository(db)
+        
+        rates = config_repo.get_config("rates", str(current_user.id)) or {}
+        
+        if task_type not in rates:
+            raise HTTPException(status_code=404, detail="Task type not found")
+        
+        rates[task_type] = rate_config.day_rate
+        success = config_repo.save_config("rates", rates, str(current_user.id))
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update rate")
+        
+        hourly_rate = rate_config.day_rate / 8
+        user_currency = config_repo.get_config("currency", str(current_user.id))
+        
+        return {
+            "message": f"Rate updated for {task_type}",
+            "day_rate": rate_config.day_rate,
+            "hourly_rate": hourly_rate,
+            "currency": user_currency
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update rate: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update rate")
 
 @app.delete("/rates/{task_type}")
-async def delete_rate(task_type: str):
+async def delete_rate(task_type: str, current_user: User = Depends(get_current_user)):
     """Delete a rate configuration"""
-    rates = load_rates_config()
-    
-    if task_type not in rates:
-        raise HTTPException(status_code=404, detail="Task type not found")
-    
-    del rates[task_type]
-    save_rates_config(rates)
-    
-    return {"message": f"Rate deleted for {task_type}"}
+    try:
+        db = next(get_db())
+        config_repo = ConfigRepository(db)
+        
+        rates = config_repo.get_config("rates", str(current_user.id)) or {}
+        
+        if task_type not in rates:
+            raise HTTPException(status_code=404, detail="Task type not found")
+        
+        del rates[task_type]
+        success = config_repo.save_config("rates", rates, str(current_user.id))
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete rate")
+        
+        return {"message": f"Rate deleted for {task_type}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete rate: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete rate")
 
 # Currency Configuration Endpoints
 @app.get("/currency")
@@ -345,9 +344,7 @@ async def get_currency(current_user: User = Depends(get_current_user)):
     
     user_currency = config_repo.get_config("currency", str(current_user.id))
     if not user_currency:
-        # Fallback to USD if somehow no currency is set (shouldn't happen for new users)
-        default_currency = {"code": "USD", "symbol": "$", "name": "US Dollar"}
-        return {"currency": default_currency}
+        raise HTTPException(status_code=404, detail="User currency not configured")
     
     return {"currency": user_currency}
 
@@ -358,20 +355,11 @@ async def get_currencies():
         db = next(get_db())
         currency_repo = CurrencyRepository(db)
         currencies = currency_repo.get_all_currencies()
-        
-        # Debug logging
-        print(f"DEBUG: Found {len(currencies)} currencies in database")
-        
+        logger.info(f"Retrieved {len(currencies)} currencies from database")
         return {"currencies": currencies}
     except Exception as e:
-        print(f"ERROR: Failed to load currencies: {e}")
-        # Fallback to a basic set if database fails
-        fallback_currencies = [
-            {"code": "USD", "symbol": "$", "name": "US Dollar"},
-            {"code": "EUR", "symbol": "€", "name": "Euro"},
-            {"code": "GBP", "symbol": "£", "name": "British Pound"}
-        ]
-        return {"currencies": fallback_currencies}
+        logger.error(f"Failed to load currencies from database: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load currencies from database")
 
 @app.get("/currency/available")
 async def get_available_currencies():
@@ -406,192 +394,39 @@ async def set_currency(currency_config: CurrencyConfig, current_user: User = Dep
 
 # Categories Endpoints
 @app.get("/categories")
-async def get_categories():
+async def get_categories(current_user: User = Depends(get_current_user)):
     """Get list of all task types from rate configuration"""
-    rates = load_rates_config()
-    
-    # Return sorted list of task types that have rates configured
-    categories = sorted(list(rates.keys()))
-    return categories
+    try:
+        db = next(get_db())
+        config_repo = ConfigRepository(db)
+        rates = config_repo.get_config("rates", str(current_user.id)) or {}
+        
+        # Return sorted list of task types that have rates configured
+        categories = sorted(list(rates.keys()))
+        return categories
+    except Exception as e:
+        logger.error(f"Failed to load categories: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load categories")
 
 # Invoice Generation Endpoints
 @app.post("/invoice/generate")
-async def generate_invoice():
+async def generate_invoice(current_user: User = Depends(get_current_user)):
     """Generate invoice from non-exported tasks"""
-    tasks_data = load_tasks_data()
-    rates = load_rates_config()
-    exported_data = load_exported_tasks()
-    
-    # Group tasks by parent heading
-    grouped_tasks = {}
-    invoice_data = []
-    exported_task_ids = []
-    
-    for task_id, task in tasks_data["tasks"].items():
-        # Skip already exported tasks
-        if task.get("exported", False) or task_id in exported_data.get("exported_task_ids", []):
-            continue
-            
-        # Skip tasks with no time entries
-        if task["total_hours"] == 0:
-            continue
-        
-        parent_heading = task.get("parent_heading", "General")
-        
-        if parent_heading not in grouped_tasks:
-            grouped_tasks[parent_heading] = []
-        
-        grouped_tasks[parent_heading].append({
-            "task_id": task_id,
-            "name": task["name"],
-            "total_hours": task["total_hours"]
-        })
-    
-    # Generate invoice lines
-    for heading, tasks in grouped_tasks.items():
-        total_hours = sum(task["total_hours"] for task in tasks)
-        
-        # Try to find rate by heading or use default rate
-        day_rate = rates.get(heading, rates.get("default", 100.0))
-        hour_rate = calculate_hourly_rate(day_rate)
-        amount = total_hours * hour_rate
-        
-        # Bundle tasks with same parent heading
-        task_names = ", ".join(task["name"] for task in tasks)
-        
-        # Get currency for formatting
-        currency = get_current_currency()
-        
-        invoice_line = {
-            "Task": task_names,
-            "Total Hours": round(total_hours, 2),
-            "Day Rate": format_currency(day_rate, currency),
-            "Hour Rate": format_currency(hour_rate, currency),
-            "Amount": format_currency(amount, currency)
-        }
-        
-        invoice_data.append(invoice_line)
-        
-        # Mark tasks as exported
-        for task in tasks:
-            exported_task_ids.append(task["task_id"])
-    
-    if not invoice_data:
-        return {"message": "No tasks available for invoicing", "invoice": []}
-    
-    # Calculate totals
-    total_hours = sum(line["Total Hours"] for line in invoice_data)
-    # Calculate total amount from raw values
-    total_amount = 0
-    for heading, tasks in grouped_tasks.items():
-        heading_hours = sum(task["total_hours"] for task in tasks)
-        day_rate = rates.get(heading, rates.get("default", 100.0))
-        hour_rate = calculate_hourly_rate(day_rate)
-        total_amount += heading_hours * hour_rate
-    
-    # Add totals row
-    currency = get_current_currency()
-    invoice_data.append({
-        "Task": "TOTAL",
-        "Total Hours": round(total_hours, 2),
-        "Day Rate": "",
-        "Hour Rate": "",
-        "Amount": format_currency(total_amount, currency)
-    })
-    
-    # Mark tasks as exported
-    for task_id in exported_task_ids:
-        tasks_data["tasks"][task_id]["exported"] = True
-    
-    save_tasks_data(tasks_data)
-    
-    # Update exported tasks tracking
-    exported_data["exported_task_ids"].extend(exported_task_ids)
-    save_exported_tasks(exported_data)
-    
+    # TODO: Implement database-based invoice generation
+    # This will use TaskRepository to get user tasks and ConfigRepository for rates
     return {
-        "message": f"Invoice generated with {len(exported_task_ids)} tasks",
-        "invoice": invoice_data,
-        "export_date": datetime.now().isoformat()
+        "message": "Invoice generation feature coming soon",
+        "status": "not_implemented"
     }
 
 @app.get("/invoice/preview")
-async def preview_invoice():
+async def preview_invoice(current_user: User = Depends(get_current_user)):
     """Preview invoice without marking tasks as exported"""
-    tasks_data = load_tasks_data()
-    rates = load_rates_config()
-    exported_data = load_exported_tasks()
-    
-    # Group tasks by parent heading
-    grouped_tasks = {}
-    invoice_data = []
-    
-    for task_id, task in tasks_data["tasks"].items():
-        # Skip already exported tasks
-        if task.get("exported", False) or task_id in exported_data.get("exported_task_ids", []):
-            continue
-            
-        # Skip tasks with no time entries
-        if task["total_hours"] == 0:
-            continue
-        
-        parent_heading = task.get("parent_heading", "General")
-        
-        if parent_heading not in grouped_tasks:
-            grouped_tasks[parent_heading] = []
-        
-        grouped_tasks[parent_heading].append({
-            "name": task["name"],
-            "total_hours": task["total_hours"]
-        })
-    
-    # Generate invoice lines
-    for heading, tasks in grouped_tasks.items():
-        total_hours = sum(task["total_hours"] for task in tasks)
-        
-        # Try to find rate by heading or use default rate
-        day_rate = rates.get(heading, rates.get("default", 100.0))
-        hour_rate = calculate_hourly_rate(day_rate)
-        amount = total_hours * hour_rate
-        
-        # Bundle tasks with same parent heading
-        task_names = ", ".join(task["name"] for task in tasks)
-        
-        # Get currency for formatting
-        currency = get_current_currency()
-        
-        invoice_line = {
-            "Task": task_names,
-            "Total Hours": round(total_hours, 2),
-            "Day Rate": format_currency(day_rate, currency),
-            "Hour Rate": format_currency(hour_rate, currency),
-            "Amount": format_currency(amount, currency)
-        }
-        
-        invoice_data.append(invoice_line)
-    
-    if not invoice_data:
-        return {"message": "No tasks available for invoicing", "invoice": []}
-    
-    # Calculate totals
-    total_hours = sum(line["Total Hours"] for line in invoice_data)
-    # Calculate total amount from raw values
-    total_amount = 0
-    for heading, tasks in grouped_tasks.items():
-        heading_hours = sum(task["total_hours"] for task in tasks)
-        day_rate = rates.get(heading, rates.get("default", 100.0))
-        hour_rate = calculate_hourly_rate(day_rate)
-        total_amount += heading_hours * hour_rate
-    
-    # Add totals row
-    currency = get_current_currency()
-    invoice_data.append({
-        "Task": "TOTAL",
-        "Total Hours": round(total_hours, 2),
-        "Day Rate": "",
-        "Hour Rate": "",
-        "Amount": format_currency(total_amount, currency)
-    })
+    # TODO: Implement database-based invoice preview
+    return {
+        "message": "Invoice preview feature coming soon",
+        "status": "not_implemented"
+    }
     
     return {
         "message": "Invoice preview (not exported)",
@@ -607,42 +442,13 @@ async def sync_planner_tasks_endpoint():
     if not all([config.get('tenant_id'), config.get('client_id'), config.get('client_secret')]):
         raise HTTPException(status_code=400, detail="Microsoft Planner not configured. Use /planner/setup first.")
     
-    try:
-        client = MSPlannerClient(
-            tenant_id=config['tenant_id'],
-            client_id=config['client_id'],
-            client_secret=config['client_secret']
-        )
-        
-        tasks_data = load_tasks_data()
-        new_tasks = await sync_planner_tasks(client, tasks_data["tasks"])
-        
-        # Add new tasks to local storage
-        for task in new_tasks:
-            task_id = str(len(tasks_data["tasks"]) + 1)
-            new_task = {
-                "id": task_id,
-                "name": task["name"],
-                "description": task["description"],
-                "parent_heading": task.get("external_source", "MS Planner"),
-                "time_entries": [],
-                "total_hours": 0,
-                "created_at": datetime.now().isoformat(),
-                "exported": False,
-                "external_id": task.get("external_id"),
-                "external_source": task.get("external_source")
-            }
-            tasks_data["tasks"][task_id] = new_task
-        
-        save_tasks_data(tasks_data)
-        
-        return {
-            "message": f"Synced {len(new_tasks)} new tasks from Microsoft Planner",
-            "new_tasks": len(new_tasks)
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to sync with Planner: {str(e)}")
+    # TODO: Implement database-based MS Planner sync
+    # This will use TaskRepository to create tasks for the authenticated user
+    return {
+        "message": "MS Planner sync feature needs to be updated for database storage",
+        "status": "not_implemented",
+        "new_tasks": 0
+    }
 
 # System Control Endpoints
 @app.get("/health")
@@ -652,15 +458,16 @@ async def health_check():
         # Basic health checks
         data_dir_accessible = DATA_DIR.exists() and DATA_DIR.is_dir()
         
-        # Check if we can load tasks (basic functionality test)
-        tasks_data = load_tasks_data()
+        # Check database connection
+        db_healthy = check_database_connection()
         
         return {
-            "status": "healthy",
+            "status": "healthy" if db_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
             "version": get_version_string(),
             "data_directory_accessible": data_dir_accessible,
-            "tasks_loadable": bool(tasks_data)
+            "database_healthy": db_healthy,
+            "storage_type": "postgresql"
         }
     except Exception as e:
         logger.exception("Health check failed")
@@ -668,12 +475,12 @@ async def health_check():
 
 @app.get("/system/data-location")
 async def get_data_location():
-    """Get the data storage location"""
+    """Get information about data storage location"""
     return {
-        "data_directory": str(DATA_DIR),
-        "tasks_file": str(TASKS_DATA_FILE),
-        "rates_file": str(RATES_CONFIG_FILE),
-        "exported_file": str(EXPORTED_TASKS_FILE)
+        "database_type": Config.DATABASE_TYPE,
+        "data_storage": "PostgreSQL Database",
+        "data_directory": str(DATA_DIR),  # Only used for invoice exports
+        "status": "database_only"
     }
 
 @app.post("/system/shutdown")
