@@ -9,11 +9,11 @@ echo "🚀 ClockIt EC2 Deployment Starting..."
 
 # Configuration
 APP_NAME="clockit"
-APP_DIR="/opt/clockit"
+APP_DIR="$HOME/clockit"
 SERVICE_NAME="clockit"
 PRIVATE_IP="172.31.14.175"
 GIT_REPO="git@github.com:JollyGreenFrogs/clockit.git"
-GIT_BRANCH="refactor/1-refactor-the-code-ready-for-cloud-deployment"
+GIT_BRANCH="main"
 
 # Colors for output
 RED='\033[0;31m'
@@ -75,9 +75,8 @@ sudo apt-get install -y \
 
 print_status "Setting up application directory..."
 
-# Create application directory
-sudo mkdir -p $APP_DIR
-sudo chown $USER:$USER $APP_DIR
+# Create application directory in user's home
+mkdir -p $APP_DIR
 
 # Clone or update the repository
 if [ -d "$APP_DIR/.git" ]; then
@@ -94,7 +93,7 @@ fi
 
 print_status "Creating environment configuration..."
 
-# Create production environment file
+# Create production environment file with safe password generation
 cat > .env << EOF
 # ClockIt Production Configuration
 DATABASE_TYPE=postgres
@@ -102,7 +101,7 @@ POSTGRES_HOST=clockit-db
 POSTGRES_PORT=5432
 POSTGRES_DB=clockit
 POSTGRES_USER=clockit
-POSTGRES_PASSWORD=$(openssl rand -base64 32)
+POSTGRES_PASSWORD="$(openssl rand -base64 32 | tr -d '/+' | head -c 32)"
 
 # Application Settings
 CLOCKIT_DATA_DIR=/app/data
@@ -110,8 +109,8 @@ CLOCKIT_DEV_MODE=false
 PYTHONPATH=/app
 
 # Security
-JWT_SECRET_KEY=$(openssl rand -base64 64)
-SECRET_KEY=$(openssl rand -base64 32)
+JWT_SECRET_KEY="$(openssl rand -base64 64 | tr -d '/+' | head -c 64)"
+SECRET_KEY="$(openssl rand -base64 32 | tr -d '/+' | head -c 32)"
 EOF
 
 print_status "Building and starting Docker containers..."
