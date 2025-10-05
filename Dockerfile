@@ -1,7 +1,23 @@
 # ClockIt - Cloud-Ready Time Tracker
 # Multi-stage Docker build for production deployment
 
-FROM python:3.12-slim as builder
+# Frontend build stage
+FROM node:18-alpine as frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY react-frontend/package*.json ./
+RUN npm ci --only=production
+
+# Copy frontend source code
+COPY react-frontend/ ./
+
+# Build frontend for production
+RUN npm run build
+
+# Backend builder stage
+FROM python:3.12-slim as backend-builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -27,18 +43,27 @@ FROM python:3.12-slim as production
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    CLOCKIT_DATA_DIR=/app/data
+    CLOCKIT_DATA_DIR=/app/data \
+    CLOCKIT_DEV_MODE=false
+
+# Install system dependencies for production
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r clockit && useradd -r -g clockit clockit
 
 # Create application directories
-RUN mkdir -p /app/data /app/logs && \
+RUN mkdir -p /app/data /app/logs /app/frontend && \
     chmod 755 /app && \
     chown -R clockit:clockit /app
 
 # Copy Python packages from builder
-COPY --from=builder /root/.local /home/clockit/.local
+COPY --from=backend-builder /root/.local /home/clockit/.local
+
+# Copy built frontend from frontend-builder
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/
 
 # Copy application code
 COPY src/ /app/src/
@@ -55,7 +80,7 @@ ENV PATH=/home/clockit/.local/bin:$PATH
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
 EXPOSE 8000
