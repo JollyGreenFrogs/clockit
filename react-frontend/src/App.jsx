@@ -12,6 +12,7 @@ import AuthPage from './components/AuthPage'
 import Loading from './components/Loading'
 import UserMenu from './components/UserMenu'
 import './App.css'
+import './jgf-brand.css'
 
 // Main authenticated app content
 function AppContent() {
@@ -225,7 +226,13 @@ function AppContent() {
       <header className="header">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="app-title">⏰ ClockIt</h1>
+            <div className="brand-logo-row">
+              <img src="/jgf-logo.svg" alt="JGF Logo" className="jgf-logo" />
+              <h1 className="app-title">
+                <img src="/clockit-icon.svg" alt="ClockIt" className="app-logo" />
+                ClockIt
+              </h1>
+            </div>
             <span className="tagline">Professional Time Tracking</span>
           </div>
           <div className="header-right">
@@ -233,7 +240,7 @@ function AppContent() {
           </div>
         </div>
       </header>
-      
+
       <div className="app-layout">
         <aside className="sidebar">
           <Navigation 
@@ -242,11 +249,15 @@ function AppContent() {
             isDesktop={isDesktop}
           />
         </aside>
-        
+
         <main className="main-content">
           {renderActiveSection()}
         </main>
       </div>
+
+      <footer className="footer">
+        <span className="footer-message">Tech for All - Powered By JGF</span>
+      </footer>
     </div>
   )
 }

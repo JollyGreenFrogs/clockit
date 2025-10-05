@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--jgf-education-background);
   padding: 20px;
   box-sizing: border-box;
   position: fixed;
@@ -95,8 +95,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+  border-color: var(--jgf-green-primary) !important;
+  box-shadow: 0 0 0 3px rgba(45, 110, 53, 0.15) !important;
   background: white !important;
   color: #333 !important;
 }
@@ -145,7 +145,7 @@
 }
 
 .auth-button.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: var(--jgf-service-icon-gradient) !important;
   color: white !important;
   font-weight: 600;
   border: none !important;
@@ -159,8 +159,8 @@
 
 .auth-button.primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-  background: linear-gradient(135deg, #5a6fd8 0%, #6b4c93 100%) !important;
+  box-shadow: 0 6px 20px rgba(45, 110, 53, 0.4);
+  background: linear-gradient(135deg, #1a4a20 0%, #2d6e35 100%) !important;
 }
 
 .auth-button.primary:active:not(:disabled) {
@@ -178,7 +178,7 @@
 
 /* Ensure the button is always visible and clickable */
 .auth-button.primary:not(:disabled) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: var(--jgf-service-icon-gradient) !important;
   color: white !important;
   pointer-events: auto !important;
 }
@@ -186,7 +186,7 @@
 .link-button {
   background: none;
   border: none;
-  color: #667eea;
+  color: var(--jgf-green-primary);
   cursor: pointer;
   text-decoration: underline;
   font-size: inherit;
@@ -196,7 +196,7 @@
 }
 
 .link-button:hover:not(:disabled) {
-  color: #5a6fd8;
+  color: var(--jgf-green-dark);
   text-decoration: none;
 }
 
@@ -244,17 +244,18 @@
 }
 
 .user-menu-button {
-  background: none;
+  background: var(--jgf-service-icon-gradient);
+  color: white;
   border: none;
-  cursor: pointer;
-  padding: 8px 12px;
   border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #333;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
+  gap: 6px;
 }
 
 .user-menu-button:hover {
@@ -265,7 +266,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--jgf-service-icon-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,7 +326,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #e1e5e9;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid var(--jgf-green-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

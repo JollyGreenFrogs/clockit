@@ -61,16 +61,17 @@
   margin-bottom: 2.5rem;
 }
 
-.stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.metric-card {
+  background: var(--jgf-service-icon-gradient);
   color: white;
-  padding: 1.5rem;
+  padding: 25px;
   border-radius: 12px;
+  text-align: center;
+  min-height: 120px;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex-direction: column;
+  justify-content: center;
+  transition: transform 0.2s ease;
 }
 
 .stat-card:hover {

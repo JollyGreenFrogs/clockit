@@ -1,0 +1,133 @@
+/* ClockIt - JollyGreenFrogs Brand Colors */
+/* Tech For All - Making technology accessible to everyone */
+
+:root {
+  /* JGF Primary Brand Colors */
+  --jgf-green-primary: #2d6e35;
+  --jgf-green-dark: #1a4a20;
+  --jgf-green-light: #7dd87d;
+  --jgf-green-lighter: #6bc76b;
+  
+  /* JGF Neutral Colors */
+  --jgf-white: #ffffff;
+  --jgf-off-white: #f8f9fa;
+  --jgf-light-gray: #e9ecef;
+  --jgf-border-gray: #f0f0f0;
+  --jgf-medium-gray: #ccc;
+  --jgf-text-gray: #666;
+  --jgf-dark-text-gray: #444444;
+  --jgf-charcoal: #333333;
+  --jgf-near-black: #333;
+  
+  /* JGF Gradients */
+  --jgf-hero-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --jgf-footer-gradient: linear-gradient(135deg, #1a4a20 0%, #2d6e35 100%);
+  --jgf-service-icon-gradient: linear-gradient(135deg, #2d6e35, #1a4a20);
+  --jgf-education-background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  
+  /* Message Colors */
+  --jgf-success-bg: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  --jgf-success-border: #c3e6cb;
+  --jgf-success-text: #155724;
+  
+  --jgf-error-bg: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  --jgf-error-border: #f5c6cb;
+  --jgf-error-text: #721c24;
+  
+  --jgf-info-bg: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  --jgf-info-border: #bee5eb;
+  --jgf-info-text: #0c5460;
+  
+  /* Focus and Accessibility */
+  --jgf-focus-outline: #7dd87d;
+  --jgf-placeholder-text: #5a5a5a;
+}
+
+/* JGF Brand Utility Classes */
+.jgf-bg-primary { background-color: var(--jgf-green-primary); }
+.jgf-bg-dark { background-color: var(--jgf-green-dark); }
+.jgf-bg-light { background-color: var(--jgf-green-light); }
+.jgf-bg-white { background-color: var(--jgf-white); }
+.jgf-bg-off-white { background-color: var(--jgf-off-white); }
+
+.jgf-text-primary { color: var(--jgf-green-primary); }
+.jgf-text-dark { color: var(--jgf-green-dark); }
+.jgf-text-light { color: var(--jgf-green-light); }
+.jgf-text-gray { color: var(--jgf-text-gray); }
+.jgf-text-dark-gray { color: var(--jgf-dark-text-gray); }
+.jgf-text-charcoal { color: var(--jgf-charcoal); }
+
+.jgf-border-primary { border-color: var(--jgf-green-primary); }
+.jgf-border-gray { border-color: var(--jgf-border-gray); }
+.jgf-border-medium { border-color: var(--jgf-medium-gray); }
+
+/* JGF Brand Button Styles */
+.jgf-btn-primary {
+  background-color: var(--jgf-green-primary);
+  color: var(--jgf-white);
+  border: 2px solid var(--jgf-green-primary);
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.jgf-btn-primary:hover {
+  background-color: var(--jgf-green-dark);
+  border-color: var(--jgf-green-dark);
+}
+
+.jgf-btn-secondary {
+  background-color: transparent;
+  color: var(--jgf-green-primary);
+  border: 2px solid var(--jgf-green-primary);
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.jgf-btn-secondary:hover {
+  background-color: var(--jgf-green-primary);
+  color: var(--jgf-white);
+}
+
+/* Gradient Backgrounds */
+.jgf-hero-bg { background: var(--jgf-hero-gradient); }
+.jgf-footer-bg { background: var(--jgf-footer-gradient); }
+.jgf-education-bg { background: var(--jgf-education-background); }
+
+/* Focus States */
+.jgf-focus:focus {
+  outline: 3px solid var(--jgf-focus-outline);
+  outline-offset: 3px;
+}
+
+/* Message Components */
+.jgf-message-success {
+  background: var(--jgf-success-bg);
+  border: 1px solid var(--jgf-success-border);
+  color: var(--jgf-success-text);
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.jgf-message-error {
+  background: var(--jgf-error-bg);
+  border: 1px solid var(--jgf-error-border);
+  color: var(--jgf-error-text);
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.jgf-message-info {
+  background: var(--jgf-info-bg);
+  border: 1px solid var(--jgf-info-border);
+  color: var(--jgf-info-text);
+  padding: 12px 16px;
+  border-radius: 8px;
+}

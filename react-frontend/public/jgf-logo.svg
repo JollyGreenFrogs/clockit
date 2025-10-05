@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="jgfGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d6e35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a4a20;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7dd87d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6bc76b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#jgfGradient)" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Stylized frog silhouette -->
+  <g transform="translate(100,100)">
+    <!-- Frog body -->
+    <ellipse cx="0" cy="10" rx="35" ry="28" fill="url(#leafGradient)" opacity="0.9"/>
+    
+    <!-- Frog head -->
+    <ellipse cx="0" cy="-15" rx="25" ry="20" fill="url(#leafGradient)" opacity="0.9"/>
+    
+    <!-- Eyes -->
+    <circle cx="-12" cy="-25" r="8" fill="#ffffff"/>
+    <circle cx="12" cy="-25" r="8" fill="#ffffff"/>
+    <circle cx="-12" cy="-25" r="4" fill="#1a4a20"/>
+    <circle cx="12" cy="-25" r="4" fill="#1a4a20"/>
+    
+    <!-- Smile -->
+    <path d="M -10,-10 Q 0,-5 10,-10" stroke="#1a4a20" stroke-width="2" fill="none" stroke-linecap="round"/>
+    
+    <!-- Front legs -->
+    <ellipse cx="-25" cy="5" rx="8" ry="15" fill="url(#leafGradient)" opacity="0.8"/>
+    <ellipse cx="25" cy="5" rx="8" ry="15" fill="url(#leafGradient)" opacity="0.8"/>
+    
+    <!-- Back legs -->
+    <ellipse cx="-30" cy="25" rx="12" ry="18" fill="url(#leafGradient)" opacity="0.8"/>
+    <ellipse cx="30" cy="25" rx="12" ry="18" fill="url(#leafGradient)" opacity="0.8"/>
+  </g>
+  
+  <!-- Company text -->
+  <text x="100" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff">JGF</text>
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#ffffff" opacity="0.9">Tech for All</text>
+</svg>
