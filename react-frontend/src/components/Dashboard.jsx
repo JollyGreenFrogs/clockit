@@ -127,39 +127,39 @@ function Dashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">📋</div>
+      <section className="stats-grid" aria-label="Dashboard Statistics">
+        <div className="stat-card" role="region" aria-labelledby="total-tasks-label">
+          <div className="stat-icon" aria-hidden="true">📋</div>
           <div className="stat-content">
             <div className="stat-value">{stats.totalTasks}</div>
-            <div className="stat-label">Total Tasks</div>
+            <div className="stat-label" id="total-tasks-label">Total Tasks</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">⏰</div>
+        <div className="stat-card" role="region" aria-labelledby="total-time-label">
+          <div className="stat-icon" aria-hidden="true">⏰</div>
           <div className="stat-content">
             <div className="stat-value">{formatTime(stats.totalHours)}</div>
-            <div className="stat-label">Total Time</div>
+            <div className="stat-label" id="total-time-label">Total Time</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">💰</div>
+        <div className="stat-card" role="region" aria-labelledby="estimated-income-label">
+          <div className="stat-icon" aria-hidden="true">💰</div>
           <div className="stat-content">
             <div className="stat-value">{formatCurrency(stats.totalIncome)}</div>
-            <div className="stat-label">Estimated Income</div>
+            <div className="stat-label" id="estimated-income-label">Estimated Income</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">📈</div>
+        <div className="stat-card" role="region" aria-labelledby="avg-per-task-label">
+          <div className="stat-icon" aria-hidden="true">📈</div>
           <div className="stat-content">
             <div className="stat-value">{formatTime(stats.averageHoursPerTask)}</div>
-            <div className="stat-label">Avg. per Task</div>
+            <div className="stat-label" id="avg-per-task-label">Avg. per Task</div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Recent Tasks */}
       <div className="dashboard-section">

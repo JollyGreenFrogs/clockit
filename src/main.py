@@ -11,20 +11,39 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pathlib import Path
 from pydantic import BaseModel
-from .version import get_version_string, get_full_version_info
-from .logging_config import configure_logging
-from .config import Config
-from .database.init import init_database, check_database_connection
-from .database.connection import get_db
-from .database.repositories import ConfigRepository, CurrencyRepository
-from .business.task_manager import TaskManager
-from .business.rate_manager import RateManager
-from .business.currency_manager import CurrencyManager
-from .business.invoice_manager import InvoiceManager
+
+# Handle imports that work from both project root and src directory
+try:
+    from .version import get_version_string, get_full_version_info
+    from .logging_config import configure_logging
+    from .config import Config
+    from .database.init import init_database, check_database_connection
+    from .database.connection import get_db
+    from .database.repositories import ConfigRepository, CurrencyRepository
+    from .business.task_manager import TaskManager
+    from .business.rate_manager import RateManager
+    from .business.currency_manager import CurrencyManager
+    from .business.invoice_manager import InvoiceManager
+    from .auth.routes import router as auth_router
+    from .auth.dependencies import get_current_user, get_optional_user
+    from .database.auth_models import User
+except ImportError:
+    # Fallback for when running from src directory
+    from version import get_version_string, get_full_version_info
+    from logging_config import configure_logging
+    from config import Config
+    from database.init import init_database, check_database_connection
+    from database.connection import get_db
+    from database.repositories import ConfigRepository, CurrencyRepository
+    from business.task_manager import TaskManager
+    from business.rate_manager import RateManager
+    from business.currency_manager import CurrencyManager
+    from business.invoice_manager import InvoiceManager
+    from auth.routes import router as auth_router
+    from auth.dependencies import get_current_user, get_optional_user
+    from database.auth_models import User
+
 import logging
-from .auth.routes import router as auth_router
-from auth.dependencies import get_current_user, get_optional_user
-from database.auth_models import User
 
 # Validate and configure application
 if not Config.validate():

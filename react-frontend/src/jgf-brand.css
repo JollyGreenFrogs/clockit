@@ -41,6 +41,18 @@
   /* Focus and Accessibility */
   --jgf-focus-outline: #7dd87d;
   --jgf-placeholder-text: #5a5a5a;
+  
+  /* Accessible Color Palette (WCAG AA Compliant) */
+  --jgf-accessible-red: #d73502;    /* High contrast red */
+  --jgf-accessible-blue: #0052cc;   /* High contrast blue */
+  --jgf-accessible-orange: #ff8c00; /* High contrast orange */
+  --jgf-accessible-purple: #6a0dad; /* High contrast purple */
+  
+  /* Color-blind friendly palette */
+  --jgf-cb-primary: #2d6e35;    /* Green (safe) */
+  --jgf-cb-secondary: #0052cc;  /* Blue (safe) */
+  --jgf-cb-tertiary: #ff8c00;   /* Orange (safe) */
+  --jgf-cb-quaternary: #8b0000; /* Dark red (safe) */
 }
 
 /* JGF Brand Utility Classes */

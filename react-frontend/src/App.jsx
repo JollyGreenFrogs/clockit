@@ -227,7 +227,7 @@ function AppContent() {
         <div className="header-content">
           <div className="header-left">
             <div className="brand-logo-row">
-              <img src="/jgf-logo.svg" alt="JGF Logo" className="jgf-logo" />
+              <img src="/jgf-logo-main2.png" alt="JGF Logo" className="jgf-logo" />
               <h1 className="app-title">
                 <img src="/clockit-icon.svg" alt="ClockIt" className="app-logo" />
                 ClockIt
