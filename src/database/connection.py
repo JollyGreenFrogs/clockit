@@ -16,11 +16,11 @@ load_dotenv()
 # Build database URL from environment variables
 def get_database_url():
     """Build database URL from environment variables"""
-    db_host = os.getenv("DB_HOST", "localhost")
-    db_port = os.getenv("DB_PORT", "5432")
-    db_name = os.getenv("DB_NAME", "clockit_db")
-    db_user = os.getenv("DB_USER", "clockit_user")
-    db_password = os.getenv("DB_PASSWORD", "")
+    db_host = os.getenv("POSTGRES_HOST", "localhost")
+    db_port = os.getenv("POSTGRES_PORT", "5432")
+    db_name = os.getenv("POSTGRES_DB", "clockit_db")
+    db_user = os.getenv("POSTGRES_USER", "clockit_user")
+    db_password = os.getenv("POSTGRES_PASSWORD", "")
     
     if db_password:
         # URL encode the password to handle special characters
