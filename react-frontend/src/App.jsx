@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Navigation from './components/Navigation'
+import Dashboard from './components/Dashboard'
 import EnhancedStopwatch from './components/EnhancedStopwatch'
+import ManualTimeEntry from './components/ManualTimeEntry'
 import EnhancedTaskManager from './components/EnhancedTaskManager'
 import RateConfiguration from './components/RateConfiguration'
 import CurrencySettings from './components/CurrencySettings'
-import PlannerIntegration from './components/PlannerIntegration'
 import InvoiceGeneration from './components/InvoiceGeneration'
 import AuthPage from './components/AuthPage'
 import Loading from './components/Loading'
@@ -14,7 +15,7 @@ import './App.css'
 
 // Main authenticated app content
 function AppContent() {
-  const [activeTab, setActiveTab] = useState('time-tracking')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [tasks, setTasks] = useState({})
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024)
   const { isAuthenticated, loading, authenticatedFetch } = useAuth()
@@ -31,6 +32,7 @@ function AppContent() {
       } else if (!newIsDesktop && activeTab === 'time-track') {
         setActiveTab('timer')
       }
+      // Dashboard is available on both desktop and mobile, so no change needed
     }
 
     window.addEventListener('resize', handleResize)
@@ -61,29 +63,20 @@ function AppContent() {
 
   const handleSaveToTask = async (taskName, timeToSave) => {
     try {
-      const response = await authenticatedFetch('/tasks', {
+      // Only add time entry - this will create the task if it doesn't exist
+      // and properly accumulate time if it does exist
+      const timeResponse = await authenticatedFetch(`/tasks/${taskName}/time`, {
         method: 'POST',
         body: JSON.stringify({
-          name: taskName,
-          description: `Time entry from timer: ${timeToSave}ms`,
+          task_id: taskName,
+          hours: timeToSave / (1000 * 60 * 60), // Convert ms to hours
+          date: new Date().toISOString().split('T')[0],
+          description: `Timer session: ${(timeToSave / (1000 * 60)).toFixed(1)} minutes`
         })
       })
-
-      // Also add time entry
-      if (response.ok) {
-        const timeResponse = await authenticatedFetch(`/tasks/${taskName}/time`, {
-          method: 'POST',
-          body: JSON.stringify({
-            task_id: taskName,
-            hours: timeToSave / (1000 * 60 * 60), // Convert ms to hours
-            date: new Date().toISOString().split('T')[0],
-            description: `Timer session: ${(timeToSave / (1000 * 60)).toFixed(1)} minutes`
-          })
-        })
-        
-        if (timeResponse.ok) {
-          await loadTasks()
-        }
+      
+      if (timeResponse.ok) {
+        await loadTasks() // This will update the tasks state and refresh all components
       }
     } catch (error) {
       console.error('Error saving time to task:', error)
@@ -102,6 +95,13 @@ function AppContent() {
 
   const renderActiveSection = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return (
+          <div className="section">
+            <Dashboard />
+          </div>
+        )
+        
       case 'time-track':
         // Desktop: Combined Timer + Tasks view
         return (
@@ -116,6 +116,13 @@ function AppContent() {
                   <EnhancedStopwatch 
                     tasks={tasks}
                     onSaveToTask={handleSaveToTask}
+                  />
+                </div>
+                
+                <div className="section">
+                  <ManualTimeEntry 
+                    tasks={tasks}
+                    onTimeAdded={loadTasks}
                   />
                 </div>
               </div>
@@ -138,15 +145,24 @@ function AppContent() {
       case 'timer':
         // Mobile: Timer only
         return (
-          <div className="section">
-            <h3>
-              <span className="section-icon">⏱️</span>
-              Time Tracking
-            </h3>
-            <EnhancedStopwatch 
-              tasks={tasks}
-              onSaveToTask={handleSaveToTask}
-            />
+          <div>
+            <div className="section">
+              <h3>
+                <span className="section-icon">⏱️</span>
+                Time Tracking
+              </h3>
+              <EnhancedStopwatch 
+                tasks={tasks}
+                onSaveToTask={handleSaveToTask}
+              />
+            </div>
+            
+            <div className="section">
+              <ManualTimeEntry 
+                tasks={tasks}
+                onTimeAdded={loadTasks}
+              />
+            </div>
           </div>
         )
       
@@ -186,16 +202,7 @@ function AppContent() {
           </div>
         )
       
-      case 'planner':
-        return (
-          <div className="section">
-            <h3>
-              <span className="section-icon">🔗</span>
-              Microsoft Planner
-            </h3>
-            <PlannerIntegration />
-          </div>
-        )
+
       
       case 'invoice':
         return (
@@ -215,7 +222,7 @@ function AppContent() {
 
   return (
     <div className="app">
-      <div className="header">
+      <header className="header">
         <div className="header-content">
           <div className="header-left">
             <h1 className="app-title">⏰ ClockIt</h1>
@@ -225,17 +232,21 @@ function AppContent() {
             <UserMenu />
           </div>
         </div>
+      </header>
+      
+      <div className="app-layout">
+        <aside className="sidebar">
+          <Navigation 
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            isDesktop={isDesktop}
+          />
+        </aside>
+        
+        <main className="main-content">
+          {renderActiveSection()}
+        </main>
       </div>
-      
-      <Navigation 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        isDesktop={isDesktop}
-      />
-      
-      <main className="main-content">
-        {renderActiveSection()}
-      </main>
     </div>
   )
 }

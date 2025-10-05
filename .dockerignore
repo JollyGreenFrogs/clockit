@@ -48,7 +48,7 @@ electron/
 # Local data and config
 clockit_data/
 *.json
-!planner_config_sample.json
+
 
 # Documentation
 docs/

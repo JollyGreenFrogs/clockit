@@ -60,7 +60,7 @@ data/
 
 # Application configuration and data files
 *.json
-!planner_config_sample.json
+
 !package*.json
 !tsconfig*.json
 

@@ -17,10 +17,12 @@ export default defineConfig({
       '/tasks': 'http://localhost:8000',
       '/rates': 'http://localhost:8000',
       '/currency': 'http://localhost:8000',
+      '/currencies': 'http://localhost:8000',
+      '/categories': 'http://localhost:8000',
       '/invoice': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
-      '/categories': 'http://localhost:8000',
-      '/planner': 'http://localhost:8000'
+      '/version': 'http://localhost:8000',
+      '/system': 'http://localhost:8000'
     }
   }
 })

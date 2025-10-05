@@ -1,17 +1,17 @@
 function Navigation({ activeTab, onTabChange, isDesktop }) {
   const tabs = [
-    { id: 'timer', label: 'Timer & Tasks', icon: '⏱️', showOnDesktop: false }, // Combined on desktop
-    { id: 'tasks', label: 'Tasks', icon: '📋', showOnDesktop: false }, // Combined on desktop  
-    { id: 'time-track', label: 'Time Tracking', icon: '⏱️', showOnDesktop: true }, // Desktop combined view
-    { id: 'rates', label: 'Rates', icon: '💰', showOnDesktop: true },
-    { id: 'currency', label: 'Currency', icon: '💱', showOnDesktop: true },
-    { id: 'planner', label: 'Planner', icon: '🔗', showOnDesktop: true },
-    { id: 'invoice', label: 'Invoice', icon: '🧾', showOnDesktop: true }
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', showOnDesktop: true, showOnMobile: true },
+    { id: 'timer', label: 'Timer & Tasks', icon: '⏱️', showOnDesktop: false, showOnMobile: true }, // Combined on desktop
+    { id: 'tasks', label: 'Tasks', icon: '📋', showOnDesktop: false, showOnMobile: true }, // Combined on desktop  
+    { id: 'time-track', label: 'Time Tracking', icon: '⏱️', showOnDesktop: true, showOnMobile: false }, // Desktop combined view
+    { id: 'rates', label: 'Rates', icon: '💰', showOnDesktop: true, showOnMobile: true },
+    { id: 'currency', label: 'Currency', icon: '💱', showOnDesktop: true, showOnMobile: true },
+    { id: 'invoice', label: 'Invoice', icon: '🧾', showOnDesktop: true, showOnMobile: true }
   ]
 
   const visibleTabs = isDesktop 
     ? tabs.filter(tab => tab.showOnDesktop)
-    : tabs.filter(tab => !tab.showOnDesktop)
+    : tabs.filter(tab => tab.showOnMobile)
 
   return (
     <nav className="app-navigation">

@@ -97,18 +97,23 @@ class TaskManager:
             return False
     
     def add_time_entry(self, task_name: str, duration: float, date: Optional[str] = None, 
-                       description: str = "") -> bool:
-        """Add time entry to a task"""
+                       description: str = "", user_id: Optional[str] = None) -> bool:
+        """Add time entry to a task for a specific user"""
         try:
+            if not user_id:
+                self.logger.error("User ID is required for adding time entries")
+                return False
+                
             task_repo, _, time_repo = self._get_repositories()
             
-            # First update the task's total time
-            tasks = task_repo.get_all_tasks()
+            # First get the current task time for this user
+            tasks = task_repo.get_all_tasks(user_id=user_id)
             current_time = tasks.get(task_name, 0.0)
             
             success = task_repo.create_or_update_task(
                 name=task_name,
-                time_spent=current_time + duration
+                time_spent=current_time + duration,
+                user_id=user_id
             )
             
             # Then add detailed time entry
@@ -116,7 +121,8 @@ class TaskManager:
                 time_repo.add_time_entry(
                     task_name=task_name,
                     duration=duration,
-                    description=description
+                    description=description,
+                    user_id=user_id
                 )
             
             return success
@@ -124,13 +130,17 @@ class TaskManager:
             self.logger.exception("Error adding time entry: %s", e)
             return False
     
-    def delete_task(self, task_name: str) -> bool:
-        """Delete a task"""
+    def delete_task(self, task_name: str, user_id: Optional[str] = None) -> bool:
+        """Delete a task for a specific user"""
         try:
+            if not user_id:
+                self.logger.error("User ID is required for deleting tasks")
+                return False
+                
             task_repo, _, _ = self._get_repositories()
-            return task_repo.delete_task(task_name)
+            return task_repo.delete_task(task_name, user_id=user_id)
         except Exception as e:
-            self.logger.exception("Error deleting task: %s", e)
+            self.logger.exception("Error deleting task for user %s: %s", user_id, e)
             return False
     
     def get_task_categories(self) -> List[str]:

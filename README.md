@@ -1,6 +1,6 @@
 # ClockIt - Professional Time Tracker
 
-A modern, cloud-ready time tracking application built with FastAPI. Track time spent on projects, generate invoices, and integrate with Microsoft Planner.
+A modern, cloud-ready time tracking application built with FastAPI. Track time spent on projects and generate invoices.
 
 ## ✨ Features
 
@@ -8,7 +8,6 @@ A modern, cloud-ready time tracking application built with FastAPI. Track time s
 - 📋 **Task Management**: Organize tasks with categories and descriptions
 - 💰 **Multi-Currency Support**: Invoice generation with 100+ currencies
 - 📄 **Invoice Generation**: Professional invoices with export tracking
-- 🔗 **Microsoft Planner Integration**: Sync tasks from Microsoft 365
 - 🏗️ **Cloud-Ready**: Docker and Kubernetes deployment support
 - 🛡️ **Production Ready**: Health checks, structured logging, and security best practices
 - 💾 **Flexible Storage**: File-based (development) or PostgreSQL (production)
@@ -65,7 +64,6 @@ clockit/
 ├── Dockerfile            # Multi-stage container build
 ├── docker-compose.yml    # Development environment
 ├── DEPLOYMENT.md         # Cloud deployment guide
-├── PLANNER_SETUP.md      # Microsoft Planner integration
 └── .env.example          # Environment configuration template
 ```
 
@@ -131,17 +129,6 @@ ClockIt is designed for cloud deployment with:
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
 
-## 📊 Microsoft Planner Integration
-
-Sync tasks from Microsoft 365 Planner:
-
-1. Set up Azure AD app registration
-2. Configure API permissions
-3. Add credentials to environment variables
-4. Use the sync endpoint to import tasks
-
-See [PLANNER_SETUP.md](PLANNER_SETUP.md) for detailed setup instructions.
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -183,20 +170,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 - Click "Pause" to stop the current timer
 - View total time spent on each task
 - Delete tasks when no longer needed
-- **Import from MS Planner**: Click "📥 Import from MS Planner" to sync tasks
-- **Setup Planner**: Use "🔧 Setup Config" to configure Microsoft Planner integration
-
-### Microsoft Planner Integration
-
-ClockIt can import tasks directly from Microsoft Planner:
-
-1. **Setup**: Click "🔧 Setup Config" in the web interface
-2. **Configure**: Follow the setup guide in `PLANNER_SETUP.md`
-3. **Import**: Click "📥 Import from MS Planner" to sync your tasks
-4. **Track**: Start timing any imported task just like manually created ones
-
-For detailed setup instructions, see [PLANNER_SETUP.md](PLANNER_SETUP.md).
-
+- **Add Tasks**: Use the "Add Task" button to create new tasks
 ### API Endpoints
 
 - `POST /tasks` - Create a new task

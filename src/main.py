@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pathlib import Path
 from pydantic import BaseModel
-from ms_planner_integration import PlannerConfig, MSPlannerClient, sync_planner_tasks
 from version import get_version_string, get_full_version_info
 from logging_config import configure_logging
 from config import Config
@@ -172,23 +171,7 @@ async def read_root():
     
     return config_status
 
-@app.post("/planner/setup")
-async def setup_planner_config():
-    """Create sample configuration file for Microsoft Planner"""
-    try:
-        PlannerConfig.create_sample_config()
-        return {
-            'message': 'Sample configuration file created: planner_config_sample.json',
-            'instructions': [
-                '1. Register an app in Azure AD (https://portal.azure.com)',
-                '2. Add Microsoft Graph API permissions: Tasks.Read, Group.Read.All', 
-                '3. Grant admin consent for the permissions',
-                '4. Copy Tenant ID, Client ID, and create a Client Secret',
-                '5. Rename planner_config_sample.json to planner_config.json and update with your values'
-            ]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create config: {str(e)}")
+
 
 # Task Management Endpoints
 @app.get("/tasks")
@@ -223,13 +206,27 @@ async def add_time_entry(task_id: str, time_entry: TimeEntry, current_user: User
         task_name=task_id,  # Note: This assumes task_id is actually task name
         duration=time_entry.hours,
         description=time_entry.description or "",
-        date=time_entry.date
+        date=time_entry.date,
+        user_id=str(current_user.id)
     )
     
     if success:
         return {"message": "Time entry added successfully"}
     else:
         raise HTTPException(status_code=500, detail="Failed to add time entry")
+
+@app.delete("/tasks/{task_name}")
+async def delete_task(task_name: str, current_user: User = Depends(get_current_user)):
+    """Delete a task for authenticated user"""
+    success = task_manager.delete_task(
+        task_name=task_name,
+        user_id=str(current_user.id)
+    )
+    
+    if success:
+        return {"message": "Task deleted successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete task")
 
 # Rate Configuration Endpoints
 @app.get("/rates")
@@ -349,7 +346,7 @@ async def get_currency(current_user: User = Depends(get_current_user)):
     return {"currency": user_currency}
 
 @app.get("/currencies")
-async def get_currencies():
+async def get_currencies(current_user: User = Depends(get_current_user)):
     """Get list of all available currencies"""
     try:
         db = next(get_db())
@@ -362,7 +359,7 @@ async def get_currencies():
         raise HTTPException(status_code=500, detail="Failed to load currencies from database")
 
 @app.get("/currency/available")
-async def get_available_currencies():
+async def get_available_currencies(current_user: User = Depends(get_current_user)):
     """Get list of all available currencies"""
     db = next(get_db())
     currency_repo = CurrencyRepository(db)
@@ -403,7 +400,7 @@ async def get_categories(current_user: User = Depends(get_current_user)):
         
         # Return sorted list of task types that have rates configured
         categories = sorted(list(rates.keys()))
-        return categories
+        return {"categories": categories}
     except Exception as e:
         logger.error(f"Failed to load categories: {e}")
         raise HTTPException(status_code=500, detail="Failed to load categories")
@@ -433,22 +430,7 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
         "invoice": invoice_data
     }
 
-# Microsoft Planner Integration Endpoints
-@app.post("/planner/sync")
-async def sync_planner_tasks_endpoint():
-    """Sync tasks from Microsoft Planner"""
-    config = PlannerConfig.load_config()
-    
-    if not all([config.get('tenant_id'), config.get('client_id'), config.get('client_secret')]):
-        raise HTTPException(status_code=400, detail="Microsoft Planner not configured. Use /planner/setup first.")
-    
-    # TODO: Implement database-based MS Planner sync
-    # This will use TaskRepository to create tasks for the authenticated user
-    return {
-        "message": "MS Planner sync feature needs to be updated for database storage",
-        "status": "not_implemented",
-        "new_tasks": 0
-    }
+
 
 # System Control Endpoints
 @app.get("/health")
@@ -474,7 +456,7 @@ async def health_check():
         raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
 
 @app.get("/system/data-location")
-async def get_data_location():
+async def get_data_location(current_user: User = Depends(get_current_user)):
     """Get information about data storage location"""
     return {
         "database_type": Config.DATABASE_TYPE,
@@ -484,7 +466,7 @@ async def get_data_location():
     }
 
 @app.post("/system/shutdown")
-async def shutdown_application():
+async def shutdown_application(current_user: User = Depends(get_current_user)):
     """Shutdown the application gracefully"""
     import threading
     import time

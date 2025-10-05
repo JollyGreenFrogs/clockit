@@ -187,9 +187,12 @@ class TimeEntryRepository:
         self.db = db
     
     def add_time_entry(self, task_name: str, duration: float, 
-                      start_time: str = None, end_time: str = None,
-                      description: str = None, user_id: str = "00000000-0000-0000-0000-000000000001") -> bool:
+                      start_time: Optional[str] = None, end_time: Optional[str] = None,
+                      description: Optional[str] = None, user_id: Optional[str] = None) -> bool:
         """Add a time entry"""
+        if not user_id:
+            raise ValueError("User ID is required for creating time entries")
+            
         try:
             entry = TimeEntry(
                 user_id=user_id,

@@ -9,15 +9,9 @@ function EnhancedTaskManager({ onTasksChange }) {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
-  const [selectedTask, setSelectedTask] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState('')
   const { authenticatedFetch } = useAuth()
-
-  // Time entry fields
-  const [timeHours, setTimeHours] = useState('')
-  const [timeDate, setTimeDate] = useState(new Date().toISOString().split('T')[0])
-  const [timeDescription, setTimeDescription] = useState('')
 
   useEffect(() => {
     loadTasks()
@@ -108,54 +102,41 @@ function EnhancedTaskManager({ onTasksChange }) {
 
 
 
-  const addTimeEntry = async () => {
-    if (!selectedTask || !timeHours) {
-      setResult('Please select a task and enter hours')
-      return
-    }
 
-    try {
-      const response = await authenticatedFetch(`/tasks/${selectedTask}/time`, {
-        method: 'POST',
-        body: JSON.stringify({
-          task_id: selectedTask,
-          hours: parseFloat(timeHours),
-          date: timeDate,
-          description: timeDescription
-        })
-      })
-
-      if (response.ok) {
-        await loadTasks()
-        if (onTasksChange) onTasksChange()
-        setTimeHours('')
-        setTimeDescription('')
-        setResult('Time entry added successfully!')
-      }
-    } catch (error) {
-      console.error('Error adding time entry:', error)
-      setResult('Error adding time entry')
-    }
-  }
 
   const deleteTask = async (taskName) => {
     try {
-      await authenticatedFetch(`/tasks/${taskName}`, {
+      setLoading(true)
+      console.log('Deleting task:', taskName)
+      
+      // URL encode the task name to handle special characters
+      const encodedTaskName = encodeURIComponent(taskName)
+      const response = await authenticatedFetch(`/tasks/${encodedTaskName}`, {
         method: 'DELETE'
       })
-      await loadTasks()
-      if (onTasksChange) onTasksChange()
+      
+      if (response.ok) {
+        setResult(`Task "${taskName}" deleted successfully`)
+        await loadTasks()
+        if (onTasksChange) onTasksChange()
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+        throw new Error(errorData.detail || `Failed to delete task: ${response.status}`)
+      }
     } catch (error) {
       console.error('Error deleting task:', error)
+      setResult(`Error deleting task: ${error.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const formatTime = (milliseconds) => {
-    const hours = Math.floor(milliseconds / 3600000)
-    const minutes = Math.floor((milliseconds % 3600000) / 60000)
-    const seconds = Math.floor((milliseconds % 60000) / 1000)
+  const formatTime = (hours) => {
+    const totalHours = Math.floor(hours)
+    const minutes = Math.floor((hours % 1) * 60)
+    const seconds = Math.floor(((hours % 1) * 60 % 1) * 60)
 
-    return `${hours.toString().padStart(2, '0')}:${minutes
+    return `${totalHours.toString().padStart(2, '0')}:${minutes
       .toString()
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   }
@@ -243,56 +224,7 @@ function EnhancedTaskManager({ onTasksChange }) {
         </div>
       </div>
 
-      {/* Manual Time Entry */}
-      <div className="time-entry-section">
-        <h4>Manual Time Entry</h4>
-        <div className="form-grid">
-          <div className="form-row">
-            <label>Select Task:</label>
-            <select 
-              value={selectedTask}
-              onChange={(e) => setSelectedTask(e.target.value)}
-            >
-              <option value="">Select a task...</option>
-              {Object.keys(tasks).map(taskName => (
-                <option key={taskName} value={taskName}>{taskName}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-row">
-            <label>Hours:</label>
-            <input
-              type="number"
-              value={timeHours}
-              onChange={(e) => setTimeHours(e.target.value)}
-              step="0.25"
-              min="0"
-              placeholder="e.g., 2.5"
-            />
-          </div>
-          <div className="form-row">
-            <label>Date:</label>
-            <input
-              type="date"
-              value={timeDate}
-              onChange={(e) => setTimeDate(e.target.value)}
-            />
-          </div>
-          <div className="form-row">
-            <label>Description:</label>
-            <input
-              type="text"
-              value={timeDescription}
-              onChange={(e) => setTimeDescription(e.target.value)}
-              placeholder="What you worked on"
-            />
-          </div>
-        </div>
 
-        <button onClick={addTimeEntry} className="btn btn-success">
-          ⏰ Add Time Entry
-        </button>
-      </div>
 
       {/* Results */}
       {result && (
@@ -315,8 +247,13 @@ function EnhancedTaskManager({ onTasksChange }) {
               <span className="task-name">{taskName}</span>
               <span className="task-time">{formatTime(timeSpent)}</span>
               <button 
-                onClick={() => deleteTask(taskName)}
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete the task "${taskName}"?`)) {
+                    deleteTask(taskName)
+                  }
+                }}
                 className="btn btn-danger btn-small"
+                disabled={loading}
               >
                 🗑️
               </button>

@@ -16,7 +16,7 @@ class UserConfig(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
-    config_type = Column(String, index=True)  # 'currency', 'rates', 'planner', etc.
+    config_type = Column(String, index=True)  # 'currency', 'rates', etc.
     config_data = Column(JSON)  # Store config as JSON (encrypted at rest)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

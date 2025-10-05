@@ -45,7 +45,7 @@ class Config:
     JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
     JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
     
-    # Microsoft Planner Integration
+
     MS_TENANT_ID = os.environ.get('MS_TENANT_ID')
     MS_CLIENT_ID = os.environ.get('MS_CLIENT_ID')
     MS_CLIENT_SECRET = os.environ.get('MS_CLIENT_SECRET')
