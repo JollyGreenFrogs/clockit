@@ -8,7 +8,7 @@ WORKDIR /app/frontend
 
 # Copy frontend package files
 COPY react-frontend/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy frontend source code
 COPY react-frontend/ ./
