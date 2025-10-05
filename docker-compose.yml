@@ -7,11 +7,11 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - clockit-backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -67,6 +67,10 @@ services:
 
 volumes:
   clockit_data:
+    driver: local
+  clockit_logs:
+    driver: local
+  postgres_data:
     driver: local
   clockit_logs:
     driver: local
