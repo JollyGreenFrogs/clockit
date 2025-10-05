@@ -2,123 +2,171 @@
 Task management business logic
 """
 
-import json
-import os
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional
-from pathlib import Path
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from database.connection import get_db
+from database.repositories import TaskRepository, CategoryRepository, TimeEntryRepository
 
 class TaskManager:
     """Handles all task-related business operations"""
     
-    def __init__(self, data_dir: Path):
-        self.data_dir = data_dir
-        self.tasks_file = data_dir / "tasks_data.json"
-        self.exported_file = data_dir / "exported_tasks.json"
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+    
+    def _get_repositories(self):
+        """Get database repositories with session"""
+        db = next(get_db())
+        return (
+            TaskRepository(db),
+            CategoryRepository(db),
+            TimeEntryRepository(db)
+        )
     
     def load_tasks(self) -> Dict:
-        """Load tasks from storage"""
-        if self.tasks_file.exists():
-            try:
-                with open(self.tasks_file, 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"Error loading tasks: {e}")
-        return {"tasks": {}}
-    
-    def save_tasks(self, tasks_data: Dict) -> bool:
-        """Save tasks to storage"""
+        """Load tasks from database"""
         try:
-            with open(self.tasks_file, 'w') as f:
-                json.dump(tasks_data, f, indent=2)
-            return True
+            task_repo, _, _ = self._get_repositories()
+            tasks = task_repo.get_all_tasks()
+            return {"tasks": tasks}
         except Exception as e:
-            print(f"Error saving tasks: {e}")
+            self.logger.exception("Error loading tasks: %s", e)
+            return {"tasks": {}}
+    
+    def load_tasks_for_user(self, user_id: str) -> Dict:
+        """Load tasks from database for specific user"""
+        try:
+            task_repo, _, _ = self._get_repositories()
+            tasks = task_repo.get_all_tasks(user_id=user_id)
+            return {"tasks": tasks}
+        except Exception as e:
+            self.logger.exception("Error loading tasks for user %s: %s", user_id, e)
+            return {"tasks": {}}
+    
+    def save_task(self, task_name: str, time_spent: float, description: str = "", 
+                  category: str = "", hourly_rate: Optional[float] = None) -> bool:
+        """Save or update a task"""
+        try:
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.create_or_update_task(
+                name=task_name,
+                time_spent=time_spent,
+                description=description,
+                category=category,
+                hourly_rate=hourly_rate
+            )
+        except Exception as e:
+            self.logger.exception("Error saving task: %s", e)
             return False
     
-    def create_task(self, name: str, description: str = "", parent_heading: str = "") -> Dict:
+    def create_task(self, name: str, description: str = "", category: str = "") -> bool:
         """Create a new task"""
-        tasks_data = self.load_tasks()
-        task_id = str(len(tasks_data["tasks"]) + 1)
-        
-        new_task = {
-            "id": task_id,
-            "name": name,
-            "description": description,
-            "parent_heading": parent_heading,
-            "time_entries": [],
-            "total_hours": 0,
-            "created_at": datetime.now().isoformat(),
-            "exported": False
-        }
-        
-        tasks_data["tasks"][task_id] = new_task
-        self.save_tasks(tasks_data)
-        return new_task
-    
-    def add_time_entry(self, task_id: str, hours: float, date: str, description: str = "") -> bool:
-        """Add time entry to a task"""
-        tasks_data = self.load_tasks()
-        
-        if task_id not in tasks_data["tasks"]:
+        try:
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.create_or_update_task(
+                name=name,
+                description=description,
+                category=category,
+                time_spent=0.0
+            )
+        except Exception as e:
+            self.logger.exception("Error creating task: %s", e)
             return False
-        
-        time_entry = {
-            "hours": hours,
-            "date": date,
-            "description": description,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        tasks_data["tasks"][task_id]["time_entries"].append(time_entry)
-        
-        # Update total hours
-        total_hours = sum(entry["hours"] for entry in tasks_data["tasks"][task_id]["time_entries"])
-        tasks_data["tasks"][task_id]["total_hours"] = total_hours
-        
-        return self.save_tasks(tasks_data)
+    
+    def create_task_for_user(self, name: str, user_id: str, description: str = "", category: str = "", 
+                            task_type: str = "", priority: str = "", hourly_rate: Optional[float] = None) -> bool:
+        """Create a new task for specific user"""
+        try:
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.create_or_update_task(
+                name=name,
+                description=description,
+                category=category,
+                time_spent=0.0,
+                hourly_rate=hourly_rate,
+                user_id=user_id
+            )
+        except Exception as e:
+            self.logger.exception("Error creating task for user %s: %s", user_id, e)
+            return False
+    
+    def add_time_entry(self, task_name: str, duration: float, date: Optional[str] = None, 
+                       description: str = "", user_id: Optional[str] = None) -> bool:
+        """Add time entry to a task for a specific user"""
+        try:
+            if not user_id:
+                self.logger.error("User ID is required for adding time entries")
+                return False
+                
+            task_repo, _, time_repo = self._get_repositories()
+            
+            # First get the current task time for this user
+            tasks = task_repo.get_all_tasks(user_id=user_id)
+            current_time = tasks.get(task_name, 0.0)
+            
+            success = task_repo.create_or_update_task(
+                name=task_name,
+                time_spent=current_time + duration,
+                user_id=user_id
+            )
+            
+            # Then add detailed time entry
+            if success:
+                time_repo.add_time_entry(
+                    task_name=task_name,
+                    duration=duration,
+                    description=description,
+                    user_id=user_id
+                )
+            
+            return success
+        except Exception as e:
+            self.logger.exception("Error adding time entry: %s", e)
+            return False
+    
+    def delete_task(self, task_name: str, user_id: Optional[str] = None) -> bool:
+        """Delete a task for a specific user"""
+        try:
+            if not user_id:
+                self.logger.error("User ID is required for deleting tasks")
+                return False
+                
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.delete_task(task_name, user_id=user_id)
+        except Exception as e:
+            self.logger.exception("Error deleting task for user %s: %s", user_id, e)
+            return False
     
     def get_task_categories(self) -> List[str]:
-        """Get all unique task categories"""
-        tasks_data = self.load_tasks()
-        categories = set()
-        
-        for task in tasks_data["tasks"].values():
-            if task.get("parent_heading"):
-                categories.add(task["parent_heading"])
-        
-        return sorted(list(categories))
-    
-    def mark_tasks_exported(self, task_ids: List[str]) -> bool:
-        """Mark tasks as exported"""
-        tasks_data = self.load_tasks()
-        
-        for task_id in task_ids:
-            if task_id in tasks_data["tasks"]:
-                tasks_data["tasks"][task_id]["exported"] = True
-        
-        # Also update exported tasks file
-        exported_data = self.load_exported_tasks()
-        exported_data["exported_task_ids"].extend(task_ids)
-        
-        return self.save_tasks(tasks_data) and self.save_exported_tasks(exported_data)
-    
-    def load_exported_tasks(self) -> Dict:
-        """Load exported tasks tracking"""
-        if self.exported_file.exists():
-            try:
-                with open(self.exported_file, 'r') as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {"exported_task_ids": []}
-    
-    def save_exported_tasks(self, exported_data: Dict) -> bool:
-        """Save exported tasks tracking"""
+        """Get all available categories"""
         try:
-            with open(self.exported_file, 'w') as f:
-                json.dump(exported_data, f, indent=2)
-            return True
+            _, cat_repo, _ = self._get_repositories()
+            categories = cat_repo.get_all_categories()
+            return [cat["name"] for cat in categories]
         except Exception as e:
-            print(f"Error saving exported tasks: {e}")
+            self.logger.exception("Error getting categories: %s", e)
+            return []
+    
+    def create_category(self, name: str, description: str = "", color: str = "") -> bool:
+        """Create a new category"""
+        try:
+            _, cat_repo, _ = self._get_repositories()
+            return cat_repo.create_category(name, description, color)
+        except Exception as e:
+            self.logger.exception("Error creating category: %s", e)
             return False
+    
+    def get_task_details(self) -> List[Dict]:
+        """Get detailed task information"""
+        try:
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.get_task_details()
+        except Exception as e:
+            self.logger.exception("Error getting task details: %s", e)
+            return []

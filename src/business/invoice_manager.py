@@ -3,6 +3,7 @@ Invoice generation business logic
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -13,14 +14,15 @@ from .currency_manager import CurrencyManager
 class InvoiceManager:
     """Handles invoice generation and export logic"""
     
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path, task_manager: TaskManager):
         self.data_dir = data_dir
         self.columns_file = data_dir / "invoice_columns.json"
         self.default_columns = ["Task", "Total Hours", "Day Rate", "Hour Rate", "Amount"]
+        self.logger = logging.getLogger(self.__class__.__name__)
         
-        self.task_manager = TaskManager(data_dir)
+        self.task_manager = task_manager
         self.rate_manager = RateManager(data_dir)
-        self.currency_manager = CurrencyManager(data_dir)
+        self.currency_manager = CurrencyManager()
     
     def load_invoice_columns(self) -> List[str]:
         """Load invoice column configuration"""
@@ -29,7 +31,7 @@ class InvoiceManager:
                 with open(self.columns_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Error loading invoice columns: {e}")
+                self.logger.exception("Error loading invoice columns: %s", e)
         return self.default_columns.copy()
     
     def save_invoice_columns(self, columns: List[str]) -> bool:
@@ -39,7 +41,7 @@ class InvoiceManager:
                 json.dump(columns, f, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving invoice columns: {e}")
+            self.logger.exception("Error saving invoice columns: %s", e)
             return False
     
     def generate_invoice(self, include_exported: bool = False) -> Dict:

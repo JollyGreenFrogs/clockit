@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clockit-service
+  labels:
+    app: clockit
+spec:
+  selector:
+    app: clockit
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clockit-service-internal
+  labels:
+    app: clockit
+spec:
+  selector:
+    app: clockit
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
