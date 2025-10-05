@@ -120,6 +120,11 @@ docker-compose up -d
 
 print_status "Configuring Nginx reverse proxy..."
 
+# Add rate limiting zone to main nginx.conf (must be in http block)
+if ! grep -q "limit_req_zone.*zone=api" /etc/nginx/nginx.conf; then
+    sudo sed -i '/http {/a\\tlimit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;' /etc/nginx/nginx.conf
+fi
+
 # Create Nginx configuration for Cloudflare tunnel
 sudo tee /etc/nginx/sites-available/$APP_NAME << EOF
 server {
@@ -131,8 +136,7 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header X-Content-Type-Options "nosniff" always;
 
-    # Rate limiting
-    limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
+    # Rate limiting (zone defined in main nginx.conf)
     limit_req zone=api burst=20 nodelay;
 
     location / {
