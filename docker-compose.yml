@@ -72,7 +72,3 @@ volumes:
     driver: local
   postgres_data:
     driver: local
-  clockit_logs:
-    driver: local
-  postgres_data:
-    driver: local
