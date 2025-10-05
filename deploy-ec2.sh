@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ClockIt EC2 Deployment Script
-# This script automates the deployment of ClockIt to an EC2 instance
+# Simple deployment: clone repo on server and build with Docker
 
 set -e  # Exit on any error
 

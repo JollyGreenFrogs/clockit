@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# ClockIt - Deploy to EC2 Server
-# This script deploys ClockIt to your EC2 server using the docker_srv SSH alias
+# ClockIt - Simple Deploy to EC2 Server
+# Copy deployment script and run it on the server
 
 set -e
 
@@ -35,6 +35,7 @@ scp deploy-ec2.sh docker_srv:~/
 
 # Run deployment on server
 print_status "Starting deployment on server..."
+print_status "This will clone the repo on the server and build with Docker..."
 ssh docker_srv "chmod +x ~/deploy-ec2.sh && ./deploy-ec2.sh"
 
 print_status "🎉 Deployment completed!"
@@ -55,6 +56,7 @@ echo "   cd /opt/clockit"
 echo "   docker-compose logs -f    # View logs"
 echo "   docker-compose restart    # Restart app"
 echo "   docker-compose ps         # Check status"
+echo "   git pull && docker-compose build --no-cache && docker-compose up -d  # Update"
 echo
 
 # Test the deployment
