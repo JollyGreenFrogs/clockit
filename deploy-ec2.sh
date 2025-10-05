@@ -75,21 +75,19 @@ sudo apt-get install -y \
 
 print_status "Setting up application directory..."
 
-# Create application directory in user's home
-mkdir -p $APP_DIR
-
-# Clone or update the repository
-if [ -d "$APP_DIR/.git" ]; then
-    print_status "Updating existing repository..."
-    cd $APP_DIR
-    git fetch origin
-    git checkout $GIT_BRANCH
-    git pull origin $GIT_BRANCH
-else
-    print_status "Cloning repository..."
-    git clone -b $GIT_BRANCH $GIT_REPO $APP_DIR
-    cd $APP_DIR
+# Check if we're in the right directory
+if [ "$(basename "$PWD")" != "clockit" ] || [ ! -f "docker-compose.yml" ]; then
+    print_error "Please run this script from the clockit directory"
+    print_status "Current directory: $PWD"
+    print_status "Expected: a directory named 'clockit' containing docker-compose.yml"
+    exit 1
 fi
+
+# Update the repository (assumes repo is already cloned)
+print_status "Updating repository..."
+git fetch origin
+git checkout $GIT_BRANCH
+git pull origin $GIT_BRANCH
 
 print_status "Creating environment configuration..."
 
