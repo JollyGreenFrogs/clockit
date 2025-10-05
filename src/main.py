@@ -8,7 +8,7 @@ from typing import List, Dict, Optional
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 from pathlib import Path
 from pydantic import BaseModel
 from .version import get_version_string, get_full_version_info
@@ -127,54 +127,24 @@ async def get_version():
     """Get application version information"""
     return get_full_version_info()
 
-# Serve a simple HTML page at the root
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-
-# Mount static files for production frontend
-frontend_path = Path(__file__).parent.parent / "frontend"
-if frontend_path.exists():
-    app.mount("/static", StaticFiles(directory=frontend_path / "assets"), name="static")
-
 @app.get("/")
 async def read_root():
     """
-    Serve the React frontend or development info
+    API Server status endpoint
     """
-    # Check if we're in development mode (React dev server running)
-    dev_mode = os.getenv('CLOCKIT_DEV_MODE', 'false').lower() == 'true'
-    
-    if dev_mode:
-        # Return development info instead of serving the old frontend
-        return JSONResponse({
-            "message": "ClockIt API Server",
-            "status": "running",
-            "version": get_version_string(),
-            "development": True,
-            "react_frontend": "http://localhost:5173",
-            "api_docs": "http://localhost:8000/docs",
-            "endpoints": {
-                "tasks": "/tasks",
-                "rates": "/rates", 
-                "currency": "/currency",
-                "invoice": "/invoice",
-                "health": "/health"
-            }
-        })
-    
-    # Production mode - serve the built React frontend
-    frontend_index = Path(__file__).parent.parent / "frontend" / "index.html"
-    if frontend_index.exists():
-        return FileResponse(frontend_index)
-    else:
-        # Fallback if frontend not built
-        return JSONResponse({
-            "message": "ClockIt API Server",
-            "status": "running",
-            "version": get_version_string(),
-            "note": "Frontend not built. Please build the React frontend for production.",
-            "api_docs": "/docs"
-        })
+    return JSONResponse({
+        "message": "ClockIt API Server",
+        "status": "running", 
+        "version": get_version_string(),
+        "endpoints": {
+            "tasks": "/tasks",
+            "rates": "/rates",
+            "currency": "/currency", 
+            "invoice": "/invoice",
+            "health": "/health",
+            "docs": "/docs"
+        }
+    })
 
 
 # Task Management Endpoints
@@ -487,38 +457,6 @@ async def shutdown_application(current_user: User = Depends(get_current_user)):
     shutdown_thread.start()
     
     return {"message": "Shutdown initiated"}
-
-# Catch-all route for React Router (SPA) - MUST BE LAST!
-@app.get("/{full_path:path}")
-async def serve_spa(full_path: str):
-    """
-    Serve React SPA for any unmatched routes (for client-side routing)
-    This route MUST be defined last to avoid interfering with API routes
-    """
-    # Skip API routes and docs
-    if (full_path.startswith("docs") or 
-        full_path.startswith("openapi.json") or
-        full_path.startswith("health") or
-        full_path.startswith("tasks") or
-        full_path.startswith("rates") or
-        full_path.startswith("currency") or
-        full_path.startswith("categories") or
-        full_path.startswith("invoice") or
-        full_path.startswith("system") or
-        full_path.startswith("auth")):
-        raise HTTPException(status_code=404, detail="API endpoint not found")
-    
-    # Check if we're in development mode
-    dev_mode = os.getenv('CLOCKIT_DEV_MODE', 'false').lower() == 'true'
-    if dev_mode:
-        raise HTTPException(status_code=404, detail="Development mode - use React dev server")
-    
-    # Serve React app for any non-API route
-    frontend_index = Path(__file__).parent.parent / "frontend" / "index.html"
-    if frontend_index.exists():
-        return FileResponse(frontend_index)
-    else:
-        raise HTTPException(status_code=404, detail="Frontend not found")
 
 if __name__ == "__main__":
     import uvicorn

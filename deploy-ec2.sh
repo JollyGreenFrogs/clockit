@@ -118,59 +118,13 @@ docker-compose down || true
 docker-compose build --no-cache
 docker-compose up -d
 
-print_status "Configuring Nginx reverse proxy..."
+print_status "Frontend container will serve directly on port 80..."
 
-# Add rate limiting zone to main nginx.conf (must be in http block)
-if ! grep -q "limit_req_zone.*zone=api" /etc/nginx/nginx.conf; then
-    sudo sed -i '/http {/a\\tlimit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;' /etc/nginx/nginx.conf
+# Stop and disable system Nginx (we use containerized Nginx now)
+if systemctl is-active --quiet nginx; then
+    sudo systemctl stop nginx
+    sudo systemctl disable nginx
 fi
-
-# Create Nginx configuration for Cloudflare tunnel
-sudo tee /etc/nginx/sites-available/$APP_NAME << EOF
-server {
-    listen 80;
-    server_name $PRIVATE_IP localhost;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-
-    # Rate limiting (zone defined in main nginx.conf)
-    limit_req zone=api burst=20 nodelay;
-
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # Health check endpoint
-    location /health {
-        proxy_pass http://localhost:8000/health;
-        access_log off;
-    }
-}
-EOF
-
-# Enable the site
-sudo ln -sf /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-
-# Test and reload Nginx
-sudo nginx -t
-sudo systemctl reload nginx
 
 print_status "Configuring firewall..."
 
@@ -276,7 +230,7 @@ print_warning "You may need to log out and back in for Docker group membership t
 
 # Final status check
 sleep 10
-if curl -sf http://localhost:8000/health > /dev/null; then
+if curl -sf http://localhost/health > /dev/null; then
     print_status "✅ Application is healthy and responding"
 else
     print_error "❌ Application health check failed"
