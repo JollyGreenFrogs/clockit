@@ -11,6 +11,14 @@ services:
     environment:
       - CLOCKIT_DATA_DIR=/app/data
       - PYTHONPATH=/app
+      - DATABASE_TYPE=postgres
+      - POSTGRES_HOST=clockit-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=clockit
+      - POSTGRES_USER=clockit
+      - POSTGRES_PASSWORD=clockit_password
+    depends_on:
+      - clockit-db
     volumes:
       - clockit_data:/app/data
       - clockit_logs:/app/logs
