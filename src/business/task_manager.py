@@ -106,8 +106,13 @@ class TaskManager:
                 
             task_repo, _, time_repo = self._get_repositories()
             
-            # First get the current task time for this user
+            # First check if task exists for this user
             tasks = task_repo.get_all_tasks(user_id=user_id)
+            if task_name not in tasks:
+                self.logger.error(f"Task '{task_name}' not found for user {user_id}. Available tasks: {list(tasks.keys())}")
+                return False
+            
+            # Get the current task time for this user
             current_time = tasks.get(task_name, 0.0)
             
             success = task_repo.create_or_update_task(

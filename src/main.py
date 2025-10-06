@@ -3,6 +3,7 @@ import json
 import signal
 import threading
 import webbrowser
+import urllib.parse
 from datetime import datetime, date
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -195,31 +196,51 @@ async def create_task(task: TaskCreate, current_user: User = Depends(get_current
 @app.post("/tasks/{task_id}/time")
 async def add_time_entry(task_id: str, time_entry: TimeEntry, current_user: User = Depends(get_current_user)):
     """Add time entry to existing task for authenticated user"""
-    success = task_manager.add_time_entry(
-        task_name=task_id,  # Note: This assumes task_id is actually task name
-        duration=time_entry.hours,
-        description=time_entry.description or "",
-        date=time_entry.date,
-        user_id=str(current_user.id)
-    )
-    
-    if success:
-        return {"message": "Time entry added successfully"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to add time entry")
+    try:
+        # URL decode the task name to handle special characters like forward slashes
+        decoded_task_name = urllib.parse.unquote(task_id)
+        logger.info(f"Adding time entry for task: '{decoded_task_name}' (original: '{task_id}')")
+        
+        success = task_manager.add_time_entry(
+            task_name=decoded_task_name,
+            duration=time_entry.hours,
+            description=time_entry.description or "",
+            date=time_entry.date,
+            user_id=str(current_user.id)
+        )
+        
+        if success:
+            return {"message": "Time entry added successfully", "task_name": decoded_task_name}
+        else:
+            raise HTTPException(status_code=404, detail=f"Task '{decoded_task_name}' not found or failed to add time entry")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error adding time entry: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to add time entry: {str(e)}")
 
 @app.delete("/tasks/{task_name}")
 async def delete_task(task_name: str, current_user: User = Depends(get_current_user)):
     """Delete a task for authenticated user"""
-    success = task_manager.delete_task(
-        task_name=task_name,
-        user_id=str(current_user.id)
-    )
-    
-    if success:
-        return {"message": "Task deleted successfully"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to delete task")
+    try:
+        # URL decode the task name to handle special characters
+        decoded_task_name = urllib.parse.unquote(task_name)
+        logger.info(f"Deleting task: '{decoded_task_name}' (original: '{task_name}')")
+        
+        success = task_manager.delete_task(
+            task_name=decoded_task_name,
+            user_id=str(current_user.id)
+        )
+        
+        if success:
+            return {"message": "Task deleted successfully", "task_name": decoded_task_name}
+        else:
+            raise HTTPException(status_code=404, detail=f"Task '{decoded_task_name}' not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error deleting task: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
 
 # Rate Configuration Endpoints
 @app.get("/rates")
@@ -402,26 +423,80 @@ async def get_categories(current_user: User = Depends(get_current_user)):
 @app.post("/invoice/generate")
 async def generate_invoice(current_user: User = Depends(get_current_user)):
     """Generate invoice from non-exported tasks"""
-    # TODO: Implement database-based invoice generation
-    # This will use TaskRepository to get user tasks and ConfigRepository for rates
-    return {
-        "message": "Invoice generation feature coming soon",
-        "status": "not_implemented"
-    }
+    try:
+        result = invoice_manager.generate_invoice(include_exported=False)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        # Export the invoice data
+        if invoice_manager.export_invoice(result):
+            # Create CSV content manually since create_csv_export doesn't exist
+            csv_lines = []
+            csv_lines.append("Description,Hours,Rate,Amount")
+            
+            for item in result.get("items", []):
+                csv_lines.append(f"\"{item.get('description', 'N/A')}\",{item.get('hours', 0):.2f},{item.get('rate', 0):.2f},{item.get('amount', 0):.2f}")
+            
+            csv_lines.append(f"Total,,{result.get('total_hours', 0):.2f},{result.get('total_amount', 0):.2f}")
+            csv_content = "\n".join(csv_lines)
+            
+            # Return as downloadable file
+            from fastapi.responses import Response
+            
+            filename = f"invoice-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
+            
+            return Response(
+                content=csv_content,
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}"
+                }
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Failed to export invoice")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error generating invoice: %s", e)
+        raise HTTPException(status_code=500, detail=f"Error generating invoice: {str(e)}")
 
 @app.get("/invoice/preview")
 async def preview_invoice(current_user: User = Depends(get_current_user)):
     """Preview invoice without marking tasks as exported"""
-    # TODO: Implement database-based invoice preview
-    return {
-        "message": "Invoice preview feature coming soon",
-        "status": "not_implemented"
-    }
-    
-    return {
-        "message": "Invoice preview (not exported)",
-        "invoice": invoice_data
-    }
+    try:
+        result = invoice_manager.generate_invoice(include_exported=False)
+        
+        if "error" in result:
+            return {"preview": result["error"], "status": "no_data"}
+        
+        # Format the preview text
+        preview_lines = []
+        preview_lines.append("=== INVOICE PREVIEW ===")
+        preview_lines.append("")
+        
+        if "items" in result:
+            preview_lines.append("ITEMS:")
+            for item in result["items"]:
+                preview_lines.append(f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}")
+            
+            preview_lines.append("")
+            preview_lines.append(f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}")
+            preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
+        
+        preview_text = "\n".join(preview_lines)
+        
+        return {
+            "preview": preview_text,
+            "status": "success"
+        }
+    except Exception as e:
+        logger.exception("Error generating invoice preview: %s", e)
+        return {
+            "preview": f"Error generating preview: {str(e)}",
+            "status": "error"
+        }
 
 
 
