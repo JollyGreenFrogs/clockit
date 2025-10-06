@@ -40,6 +40,12 @@ if os.getenv("DEV_MODE") == "sqlite":
 
 engine = create_engine(
     DATABASE_URL,
+    # Connection pool settings to prevent timeouts
+    pool_size=20,        # Base number of connections to keep open
+    max_overflow=30,     # Additional connections allowed
+    pool_timeout=30,     # Time to wait for connection
+    pool_recycle=3600,   # Recycle connections after 1 hour
+    pool_pre_ping=True,  # Validate connections before use
     # SQLite specific settings
     connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )

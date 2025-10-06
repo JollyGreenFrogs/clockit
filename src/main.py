@@ -4,6 +4,7 @@ import signal
 import threading
 import webbrowser
 import urllib.parse
+import re
 from datetime import datetime, date
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -11,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 # Handle imports that work from both project root and src directory
 try:
@@ -101,6 +102,24 @@ class TaskCreate(BaseModel):
     name: str
     description: Optional[str] = ""
     parent_heading: Optional[str] = ""
+    
+    @validator('name')
+    def validate_task_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Task name cannot be empty')
+        
+        # Check for excessive spaces
+        if '  ' in v:  # Multiple consecutive spaces
+            raise ValueError('Task name cannot contain multiple consecutive spaces.')
+        
+        if v != v.strip():
+            raise ValueError('Task name cannot start or end with spaces.')
+        
+        # Ensure reasonable length
+        if len(v) > 100:
+            raise ValueError('Task name must be 100 characters or less.')
+        
+        return v.strip()
 
 class RateConfig(BaseModel):
     task_type: str
@@ -177,32 +196,41 @@ async def get_tasks(current_user: User = Depends(get_current_user)):
 @app.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
     """Create a new task for authenticated user"""
-    # Use task manager to create task with user context
-    success = task_manager.create_task_for_user(
-        name=task.name,
-        user_id=str(current_user.id),
-        description=task.description or "",
-        category=getattr(task, 'category', ''),
-        task_type=getattr(task, 'task_type', ''),
-        priority=getattr(task, 'priority', ''),
-        hourly_rate=getattr(task, 'hourly_rate', None)
-    )
-    
-    if success:
-        return {"message": "Task created successfully", "task_name": task.name}
-    else:
+    try:
+        # The TaskCreate model validation will automatically check for problematic characters
+        # If validation fails, Pydantic will raise a validation error
+        
+        # Use task manager to create task with user context
+        success = task_manager.create_task_for_user(
+            name=task.name,
+            user_id=str(current_user.id),
+            description=task.description or "",
+            category=getattr(task, 'category', ''),
+            task_type=getattr(task, 'task_type', ''),
+            priority=getattr(task, 'priority', ''),
+            hourly_rate=getattr(task, 'hourly_rate', None)
+        )
+        
+        if success:
+            return {"message": "Task created successfully", "task_name": task.name}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create task")
+            
+    except ValueError as e:
+        # Handle validation errors from Pydantic
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Error creating task: %s", e)
         raise HTTPException(status_code=500, detail="Failed to create task")
 
 @app.post("/tasks/{task_id}/time")
-async def add_time_entry(task_id: str, time_entry: TimeEntry, current_user: User = Depends(get_current_user)):
-    """Add time entry to existing task for authenticated user"""
+async def add_time_entry(task_id: int, time_entry: TimeEntry, current_user: User = Depends(get_current_user)):
+    """Add time entry to existing task by ID for authenticated user"""
     try:
-        # URL decode the task name to handle special characters like forward slashes
-        decoded_task_name = urllib.parse.unquote(task_id)
-        logger.info(f"Adding time entry for task: '{decoded_task_name}' (original: '{task_id}')")
+        logger.info(f"Adding time entry for task ID: {task_id}")
         
-        success = task_manager.add_time_entry(
-            task_name=decoded_task_name,
+        success = task_manager.add_time_entry_by_id(
+            task_id=task_id,
             duration=time_entry.hours,
             description=time_entry.description or "",
             date=time_entry.date,
@@ -210,32 +238,38 @@ async def add_time_entry(task_id: str, time_entry: TimeEntry, current_user: User
         )
         
         if success:
-            return {"message": "Time entry added successfully", "task_name": decoded_task_name}
+            # Get task details for response
+            task = task_manager.get_task_by_id(task_id, str(current_user.id))
+            task_name = task['name'] if task else f"Task ID {task_id}"
+            return {"message": "Time entry added successfully", "task_name": task_name, "task_id": task_id}
         else:
-            raise HTTPException(status_code=404, detail=f"Task '{decoded_task_name}' not found or failed to add time entry")
+            raise HTTPException(status_code=404, detail=f"Task ID {task_id} not found or failed to add time entry")
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Error adding time entry: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to add time entry: {str(e)}")
 
-@app.delete("/tasks/{task_name}")
-async def delete_task(task_name: str, current_user: User = Depends(get_current_user)):
-    """Delete a task for authenticated user"""
+@app.delete("/tasks/{task_id}")
+async def delete_task(task_id: int, current_user: User = Depends(get_current_user)):
+    """Delete a task by ID for authenticated user"""
     try:
-        # URL decode the task name to handle special characters
-        decoded_task_name = urllib.parse.unquote(task_name)
-        logger.info(f"Deleting task: '{decoded_task_name}' (original: '{task_name}')")
+        logger.info(f"Deleting task ID: {task_id}")
+        
+        # Get task details before deletion for response
+        task = task_manager.get_task_by_id(task_id, str(current_user.id))
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task ID {task_id} not found")
         
         success = task_manager.delete_task(
-            task_name=decoded_task_name,
+            task_name=task['name'],
             user_id=str(current_user.id)
         )
         
         if success:
-            return {"message": "Task deleted successfully", "task_name": decoded_task_name}
+            return {"message": "Task deleted successfully", "task_name": task['name'], "task_id": task_id}
         else:
-            raise HTTPException(status_code=404, detail=f"Task '{decoded_task_name}' not found")
+            raise HTTPException(status_code=500, detail=f"Failed to delete task ID {task_id}")
     except HTTPException:
         raise
     except Exception as e:
