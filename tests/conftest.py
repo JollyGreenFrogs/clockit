@@ -25,17 +25,34 @@ from config import Config
 
 @pytest.fixture(scope="session")
 def test_database_url():
-    """Create a test database URL - use PostgreSQL for testing to match production"""
-    # Use a test PostgreSQL database to match the production environment
-    # This requires having PostgreSQL running locally for tests
-    return "postgresql://clockit_user:tTWkfV8JEtx%5E3u@localhost:5432/clockit_test_db"
+    """Create a test database URL - use SQLite for CI, PostgreSQL for local testing"""
+    # Check if we're in CI environment or DEV_MODE is sqlite
+    if os.getenv("DEV_MODE") == "sqlite" or os.getenv("ENVIRONMENT") == "test":
+        # Use SQLite for CI/test environment
+        test_dir = Path(tempfile.gettempdir()) / "clockit_test"
+        test_dir.mkdir(exist_ok=True)
+        return f"sqlite:///{test_dir}/test_clockit.db"
+    else:
+        # Use PostgreSQL for local testing to match production
+        return "postgresql://clockit_user:tTWkfV8JEtx%5E3u@localhost:5432/clockit_test_db"
 
 
 @pytest.fixture(scope="session") 
 def test_engine(test_database_url):
     """Create a test database engine"""
     from sqlalchemy import text
-    engine = create_engine(test_database_url, echo=False)
+    
+    # Configure engine based on database type
+    if "sqlite" in test_database_url:
+        # SQLite configuration
+        engine = create_engine(
+            test_database_url, 
+            echo=False,
+            connect_args={"check_same_thread": False}
+        )
+    else:
+        # PostgreSQL configuration
+        engine = create_engine(test_database_url, echo=False)
     
     # Create test database if it doesn't exist
     try:
@@ -43,7 +60,7 @@ def test_engine(test_database_url):
         Base.metadata.create_all(bind=engine)
         yield engine
     except Exception as e:
-        # If PostgreSQL test DB is not available, skip tests that require it
+        # If database is not available, skip tests that require it
         pytest.skip(f"Test database not available: {e}")
     finally:
         # Cleanup test database

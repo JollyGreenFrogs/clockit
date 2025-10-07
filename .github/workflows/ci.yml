@@ -25,6 +25,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
+        env:
+          DEV_MODE: sqlite
+          ENVIRONMENT: test
         run: |
           . .venv/bin/activate
           PYTHONPATH=${{ github.workspace }} .venv/bin/pytest -q
