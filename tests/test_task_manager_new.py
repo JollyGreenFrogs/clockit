@@ -63,12 +63,12 @@ class TestTaskManagerWithMockedDB:
         user_id = str(uuid.uuid4())
         
         # Mock successful repository call
-        task_repo.get_all_tasks.return_value = {"user_task": 1.5}
+        task_repo.get_all_tasks_detailed.return_value = {"user_task": 1.5}
         
         result = tm.load_tasks_for_user(user_id)
         
         assert result == {"tasks": {"user_task": 1.5}}
-        task_repo.get_all_tasks.assert_called_once_with(user_id=user_id)
+        task_repo.get_all_tasks_detailed.assert_called_once_with(user_id=user_id)
     
     def test_load_tasks_database_error(self, task_manager_with_mocks):
         """Test task loading with database error"""
@@ -170,14 +170,15 @@ class TestTaskManagerWithMockedDB:
     def test_delete_task_success(self, task_manager_with_mocks):
         """Test successful task deletion"""
         tm, (task_repo, _, _) = task_manager_with_mocks
+        user_id = str(uuid.uuid4())
         
         # Mock successful repository call
         task_repo.delete_task.return_value = True
         
-        result = tm.delete_task("Test Task")
+        result = tm.delete_task("Test Task", user_id=user_id)
         
         assert result is True
-        task_repo.delete_task.assert_called_once_with("Test Task")
+        task_repo.delete_task.assert_called_once_with("Test Task", user_id=user_id)
     
     def test_get_task_categories_success(self, task_manager_with_mocks):
         """Test successful category retrieval"""
@@ -215,6 +216,7 @@ class TestTaskManagerWithMockedDB:
     def test_add_time_entry_success(self, task_manager_with_mocks):
         """Test successful time entry addition"""
         tm, (task_repo, _, time_repo) = task_manager_with_mocks
+        user_id = str(uuid.uuid4())
         
         # Mock existing tasks and successful operations
         task_repo.get_all_tasks.return_value = {"Test Task": 2.0}
@@ -225,19 +227,22 @@ class TestTaskManagerWithMockedDB:
             task_name="Test Task",
             duration=1.5,
             date="2025-10-01",
-            description="Additional work"
+            description="Additional work",
+            user_id=user_id
         )
         
         assert result is True
-        task_repo.get_all_tasks.assert_called_once()
+        task_repo.get_all_tasks.assert_called_once_with(user_id=user_id)
         task_repo.create_or_update_task.assert_called_once_with(
             name="Test Task",
-            time_spent=3.5  # 2.0 + 1.5
+            time_spent=3.5,  # 2.0 + 1.5
+            user_id=user_id
         )
         time_repo.add_time_entry.assert_called_once_with(
             task_name="Test Task",
             duration=1.5,
-            description="Additional work"
+            description="Additional work",
+            user_id=user_id
         )
     
     def test_get_task_details_success(self, task_manager_with_mocks):

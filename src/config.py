@@ -92,7 +92,7 @@ class Config:
         
         # Production environment validations
         if cls.ENVIRONMENT == 'production':
-            if not cls.SECRET_KEY:
+            if not cls.SECRET_KEY or cls.SECRET_KEY == 'test-secret-key-for-development-only':
                 logger.error("SECRET_KEY must be set in production")
                 valid = False
             if cls.DEBUG:
@@ -108,6 +108,12 @@ class Config:
     def get_database_url(cls) -> Optional[str]:
         """Get the appropriate database URL based on configuration"""
         if cls.DATABASE_TYPE == 'postgres':
+            # Generate DATABASE_URL if not set
+            if not cls.DATABASE_URL:
+                cls.DATABASE_URL = (
+                    f"postgresql://{cls.POSTGRES_USER}:{cls.POSTGRES_PASSWORD}@"
+                    f"{cls.POSTGRES_HOST}:{cls.POSTGRES_PORT}/{cls.POSTGRES_DB}"
+                )
             return cls.DATABASE_URL
         elif cls.DATABASE_TYPE == 'file':
             # Generate SQLite URL for file-based storage
