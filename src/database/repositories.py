@@ -57,33 +57,41 @@ class TaskRepository:
     
     def get_all_tasks(self, user_id: str = "00000000-0000-0000-0000-000000000001") -> Dict[str, float]:
         """Get all tasks as name -> time_spent mapping (legacy method)"""
-        # Convert string UUID to UUID object for comparison
-        user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
-        tasks = self.db.query(Task).filter(
-            and_(Task.user_id == user_uuid, Task.is_active == True)
-        ).all()
-        return {task.name: task.time_spent for task in tasks}
+        try:
+            # Convert string UUID to UUID object for comparison
+            user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+            tasks = self.db.query(Task).filter(
+                and_(Task.user_id == user_uuid, Task.is_active == True)
+            ).all()
+            return {task.name: task.time_spent for task in tasks}
+        except (ValueError, TypeError):
+            # Return empty dict for invalid UUIDs
+            return {}
 
     def get_all_tasks_detailed(self, user_id: str = "00000000-0000-0000-0000-000000000001") -> List[Dict]:
         """Get all tasks with full details including IDs"""
-        # Convert string UUID to UUID object for comparison
-        user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
-        tasks = self.db.query(Task).filter(
-            and_(Task.user_id == user_uuid, Task.is_active == True)
-        ).all()
-        return [
-            {
-                "id": task.id,
-                "name": task.name,
-                "description": task.description,
-                "category": task.category,
-                "time_spent": task.time_spent,
-                "hourly_rate": task.hourly_rate,
-                "created_at": task.created_at.isoformat() if task.created_at else None,
-                "updated_at": task.updated_at.isoformat() if task.updated_at else None
-            }
-            for task in tasks
-        ]
+        try:
+            # Convert string UUID to UUID object for comparison
+            user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+            tasks = self.db.query(Task).filter(
+                and_(Task.user_id == user_uuid, Task.is_active == True)
+            ).all()
+            return [
+                {
+                    "id": task.id,
+                    "name": task.name,
+                    "description": task.description,
+                    "category": task.category,
+                    "time_spent": task.time_spent,
+                    "hourly_rate": task.hourly_rate,
+                    "created_at": task.created_at.isoformat() if task.created_at else None,
+                    "updated_at": task.updated_at.isoformat() if task.updated_at else None
+                }
+                for task in tasks
+            ]
+        except (ValueError, TypeError):
+            # Return empty list for invalid UUIDs
+            return []
 
     def get_task_by_id(self, task_id: int, user_id: str = "00000000-0000-0000-0000-000000000001") -> Optional[Dict]:
         """Get a single task by ID"""

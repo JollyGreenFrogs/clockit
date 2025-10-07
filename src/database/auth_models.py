@@ -13,7 +13,7 @@ class User(Base):
     """User model with authentication support"""
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     username = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
@@ -56,8 +56,8 @@ class UserSession(Base):
     """Track user sessions for security"""
     __tablename__ = "user_sessions"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), index=True, nullable=False)
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(), index=True, nullable=False)
     session_token = Column(String(255), unique=True, index=True)
     ip_address = Column(String(45))  # IPv6 compatible
     user_agent = Column(Text)
@@ -69,8 +69,8 @@ class AuditLog(Base):
     """Audit trail for security and compliance"""
     __tablename__ = "audit_logs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), index=True, nullable=True)
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(), index=True, nullable=True)
     action = Column(String(100), nullable=False)  # login, logout, create_task, etc.
     resource_type = Column(String(50))  # task, config, user
     resource_id = Column(String(255))
