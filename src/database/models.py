@@ -3,7 +3,7 @@ Database models for clockit application
 """
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import JSON, UUID
+from .types import UUID, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid

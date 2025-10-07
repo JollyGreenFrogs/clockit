@@ -3,7 +3,7 @@ User authentication and authorization models
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
-from sqlalchemy.dialects.postgresql import UUID
+from .types import UUID
 from datetime import datetime, timedelta
 import uuid
 import bcrypt
