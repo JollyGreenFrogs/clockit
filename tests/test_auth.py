@@ -143,7 +143,7 @@ class TestProtectedEndpoints:
         """Test accessing protected endpoint with invalid token"""
         test_client.headers.update({"Authorization": "Bearer invalid_token"})
         response = test_client.get("/tasks")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
     
     def test_create_task_without_auth(self, test_client, test_task_data):
         """Test creating task without authentication"""

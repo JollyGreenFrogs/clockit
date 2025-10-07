@@ -108,9 +108,11 @@ def temp_data_dir():
 @pytest.fixture
 def test_user_data():
     """Test user data for registration/login"""
+    import uuid
+    unique_id = str(uuid.uuid4())[:8]
     return {
-        "username": "testuser",
-        "email": "test@example.com",
+        "username": f"testuser_{unique_id}",
+        "email": f"test_{unique_id}@example.com",
         "password": "testpass123",
         "full_name": "Test User"
     }
@@ -120,7 +122,7 @@ def test_user_data():
 def test_user(test_db_session, test_user_data):
     """Create a test user in the database"""
     auth_service = AuthService(test_db_session)
-    user = auth_service.register_user(
+    user = auth_service.create_user(
         username=test_user_data["username"],
         email=test_user_data["email"],
         password=test_user_data["password"],
@@ -184,16 +186,14 @@ def sample_category_data():
 
 @pytest.fixture
 def clean_database(test_db_session):
-    """Clean all tables before test"""
-    # Delete in correct order to avoid foreign key constraints
+    """Clean all tables before test (except for users needed for authentication)"""
+    # Only clean data tables, not users for authenticated tests
     test_db_session.query(TimeEntry).delete()
     test_db_session.query(Task).delete()
     test_db_session.query(Category).delete()
-    test_db_session.query(UserConfig).delete()
-    test_db_session.query(User).delete()
     test_db_session.commit()
     yield
-    # Cleanup after test
+    # Cleanup after test - clean everything
     test_db_session.query(TimeEntry).delete()
     test_db_session.query(Task).delete()
     test_db_session.query(Category).delete()

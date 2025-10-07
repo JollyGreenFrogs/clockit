@@ -30,7 +30,7 @@ jobs:
           ENVIRONMENT: test
         run: |
           . .venv/bin/activate
-          PYTHONPATH=${{ github.workspace }} .venv/bin/pytest -q
+          PYTHONPATH=${{ github.workspace }} .venv/bin/pytest -q --tb=no -x
 
       - name: Run linters
         run: |

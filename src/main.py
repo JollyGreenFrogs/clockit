@@ -545,12 +545,26 @@ async def health_check():
         # Check database connection
         db_healthy = check_database_connection()
         
+        # Check if task system is loadable (basic functionality test)
+        tasks_loadable = True
+        try:
+            # Simple test to see if we can instantiate task manager
+            from business.task_manager import TaskManager
+            tm = TaskManager()
+            tasks_loadable = True
+        except Exception as e:
+            logger.warning(f"Task system check failed: {e}")
+            tasks_loadable = False
+        
+        overall_healthy = db_healthy and tasks_loadable
+        
         return {
-            "status": "healthy" if db_healthy else "unhealthy",
+            "status": "healthy" if overall_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
             "version": get_version_string(),
             "data_directory_accessible": data_dir_accessible,
             "database_healthy": db_healthy,
+            "tasks_loadable": tasks_loadable,
             "storage_type": "postgresql"
         }
     except Exception as e:

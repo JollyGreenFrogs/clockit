@@ -28,14 +28,26 @@ class AuthService:
                    full_name: Optional[str] = None) -> User:
         """Create a new user account"""
         # Check if user exists
-        existing_user = self.db.query(User).filter(
-            (User.email == email) | (User.username == username)
-        ).first()
+        existing_user_by_email = self.db.query(User).filter(User.email == email).first()
+        existing_user_by_username = self.db.query(User).filter(User.username == username).first()
         
-        if existing_user:
+        if existing_user_by_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email or username already registered"
+                detail="Email already exists"
+            )
+        
+        if existing_user_by_username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists"
+            )
+        
+        # Validate password strength
+        if len(password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 6 characters long"
             )
         
         # Hash password with bcrypt
@@ -135,7 +147,7 @@ class AuthService:
             return payload
         except jwt.ExpiredSignatureError:
             return None
-        except jwt.JWTError:
+        except jwt.PyJWTError:
             return None
     
     def get_current_user(self, token: str) -> Optional[User]:

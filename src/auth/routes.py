@@ -49,6 +49,9 @@ class LoginRequest(BaseModel):
     email_or_username: str
     password: str
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
 @router.post("/register", response_model=UserResponse)
 async def register(
     user_data: UserRegister,
@@ -75,6 +78,9 @@ async def register(
             subscription_tier=user.subscription_tier,
             created_at=user.created_at.isoformat()
         )
+    except HTTPException:
+        # Re-raise HTTPExceptions with their original detail
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -127,13 +133,13 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
-    refresh_token: str,
+    refresh_request: RefreshRequest,
     db: Session = Depends(get_db)
 ):
     """Refresh access token using refresh token"""
     auth_service = AuthService(db)
     
-    payload = auth_service.verify_token(refresh_token)
+    payload = auth_service.verify_token(refresh_request.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

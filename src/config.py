@@ -41,9 +41,12 @@ class Config:
     POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
     
     # Authentication (for future implementation)
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'test-secret-key-for-development-only')
     JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
     JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get('ACCESS_TOKEN_EXPIRE_MINUTES', '15'))
+    REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get('REFRESH_TOKEN_EXPIRE_DAYS', '7'))
+    BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
     
 
     MS_TENANT_ID = os.environ.get('MS_TENANT_ID')
@@ -51,7 +54,11 @@ class Config:
     MS_CLIENT_SECRET = os.environ.get('MS_CLIENT_SECRET')
     
     # Logging
-    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    
+    # CORS configuration
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
+    ALLOWED_ORIGINS = CORS_ORIGINS  # Alias for CORS_ORIGINS.upper()
     LOG_FORMAT = os.environ.get('LOG_FORMAT', 'json' if ENVIRONMENT == 'production' else 'text')
     
     # Cloud-specific settings
@@ -102,6 +109,10 @@ class Config:
         """Get the appropriate database URL based on configuration"""
         if cls.DATABASE_TYPE == 'postgres':
             return cls.DATABASE_URL
+        elif cls.DATABASE_TYPE == 'file':
+            # Generate SQLite URL for file-based storage
+            db_path = cls.DATA_DIR / "clockit.db"
+            return f"sqlite:///{db_path}"
         return None
     
     @classmethod
