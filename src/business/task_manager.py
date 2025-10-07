@@ -17,8 +17,16 @@ from database.repositories import TaskRepository, CategoryRepository, TimeEntryR
 class TaskManager:
     """Handles all task-related business operations"""
     
-    def __init__(self):
+    def __init__(self, data_dir=None):
+        """Initialize TaskManager
+        
+        Args:
+            data_dir: Legacy parameter for backwards compatibility, ignored in database version
+        """
         self.logger = logging.getLogger(self.__class__.__name__)
+        if data_dir is not None:
+            # For backwards compatibility, just log a warning
+            self.logger.warning("data_dir parameter is deprecated and ignored in database-backed TaskManager")
     
     def _get_repositories(self):
         """Get database repositories with session"""
@@ -47,7 +55,7 @@ class TaskManager:
             return {"tasks": tasks}
         except Exception as e:
             self.logger.exception("Error loading tasks for user %s: %s", user_id, e)
-            return {"tasks": []}
+            return {"tasks": {}}
 
     def get_task_by_id(self, task_id: int, user_id: str) -> Optional[Dict]:
         """Get a single task by ID"""
