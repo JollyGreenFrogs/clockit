@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from src.business.task_manager import TaskManager
 
 
@@ -14,7 +15,9 @@ def test_create_task_and_add_time_entry(tmp_path):
     task_id = task["id"]
 
     # Add a time entry
-    success = tm.add_time_entry(task_id, hours=2.5, date="2025-09-26", description="Worked on feature")
+    success = tm.add_time_entry(
+        task_id, hours=2.5, date="2025-09-26", description="Worked on feature"
+    )
     assert success
 
     # Reload tasks and verify
