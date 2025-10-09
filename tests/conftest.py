@@ -2,25 +2,26 @@
 Test configuration and fixtures for ClockIt test suite
 """
 
-import pytest
-import tempfile
 import os
+import sys
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from unittest.mock import patch
-import sys
 
 # Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from database.connection import Base, get_db
-from database.auth_models import User
-from database.models import Task, Category, TimeEntry, UserConfig
 from auth.services import AuthService
-from main import app
 from config import Config
+from database.auth_models import User
+from database.connection import Base, get_db
+from database.models import Category, Task, TimeEntry, UserConfig
+from main import app
 
 
 @pytest.fixture(scope="session")
@@ -34,14 +35,16 @@ def test_database_url():
         return f"sqlite:///{test_dir}/test_clockit.db"
     else:
         # Use PostgreSQL for local testing to match production
-        return "postgresql://clockit_user:tTWkfV8JEtx%5E3u@localhost:5432/clockit_test_db"
+        return (
+            "postgresql://clockit_user:tTWkfV8JEtx%5E3u@localhost:5432/clockit_test_db"
+        )
 
 
-@pytest.fixture(scope="session") 
+@pytest.fixture(scope="session")
 def test_engine(test_database_url):
     """Create a test database engine"""
     from sqlalchemy import text
-    
+
     # Configure engine based on database type
     if "sqlite" in test_database_url:
         # SQLite configuration
@@ -53,7 +56,7 @@ def test_engine(test_database_url):
     else:
         # PostgreSQL configuration
         engine = create_engine(test_database_url, echo=False)
-    
+
     # Create test database if it doesn't exist
     try:
         # Try to connect and create tables
@@ -73,7 +76,9 @@ def test_engine(test_database_url):
 @pytest.fixture
 def test_db_session(test_engine):
     """Create a test database session"""
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
     session = TestingSessionLocal()
     yield session
     session.rollback()
@@ -83,17 +88,18 @@ def test_db_session(test_engine):
 @pytest.fixture
 def test_client(test_db_session):
     """Create a test client with overridden database dependency"""
+
     def override_get_db():
         try:
             yield test_db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     with TestClient(app) as client:
         yield client
-    
+
     app.dependency_overrides.clear()
 
 
@@ -101,7 +107,7 @@ def test_client(test_db_session):
 def temp_data_dir():
     """Create a temporary data directory for file-based tests"""
     with tempfile.TemporaryDirectory() as temp_dir:
-        with patch.object(Config, 'DATA_DIR', Path(temp_dir)):
+        with patch.object(Config, "DATA_DIR", Path(temp_dir)):
             yield Path(temp_dir)
 
 
@@ -109,12 +115,13 @@ def temp_data_dir():
 def test_user_data():
     """Test user data for registration/login"""
     import uuid
+
     unique_id = str(uuid.uuid4())[:8]
     return {
         "username": f"testuser_{unique_id}",
         "email": f"test_{unique_id}@example.com",
         "password": "testpass123",
-        "full_name": "Test User"
+        "full_name": "Test User",
     }
 
 
@@ -126,7 +133,7 @@ def test_user(test_db_session, test_user_data):
         username=test_user_data["username"],
         email=test_user_data["email"],
         password=test_user_data["password"],
-        full_name=test_user_data.get("full_name")
+        full_name=test_user_data.get("full_name"),
     )
     test_db_session.commit()
     return user
@@ -138,28 +145,31 @@ def auth_tokens(test_client, test_user_data):
     # Register user
     response = test_client.post("/auth/register", json=test_user_data)
     assert response.status_code == 200
-    
+
     # Login to get tokens
-    login_response = test_client.post("/auth/login", json={
-        "email_or_username": test_user_data["username"],
-        "password": test_user_data["password"]
-    })
+    login_response = test_client.post(
+        "/auth/login",
+        json={
+            "email_or_username": test_user_data["username"],
+            "password": test_user_data["password"],
+        },
+    )
     assert login_response.status_code == 200
-    
+
     tokens = login_response.json()
     return {
         "access_token": tokens["access_token"],
         "refresh_token": tokens["refresh_token"],
-        "user_id": tokens["user"]["id"]
+        "user_id": tokens["user"]["id"],
     }
 
 
 @pytest.fixture
 def authenticated_client(test_client, auth_tokens):
     """Create an authenticated test client"""
-    test_client.headers.update({
-        "Authorization": f"Bearer {auth_tokens['access_token']}"
-    })
+    test_client.headers.update(
+        {"Authorization": f"Bearer {auth_tokens['access_token']}"}
+    )
     return test_client
 
 
@@ -170,7 +180,7 @@ def test_task_data():
         "name": "Test Task",
         "description": "A task for testing",
         "category": "Development",
-        "hourly_rate": 50.0
+        "hourly_rate": 50.0,
     }
 
 
@@ -180,7 +190,7 @@ def sample_category_data():
     return {
         "name": "Development",
         "description": "Software development tasks",
-        "color": "#007bff"
+        "color": "#007bff",
     }
 
 

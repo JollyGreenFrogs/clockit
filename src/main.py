@@ -1,34 +1,34 @@
-import os
 import json
+import os
+import re
 import signal
 import threading
-import webbrowser
 import urllib.parse
-import re
-from datetime import datetime, date
-from typing import List, Dict, Optional
+import webbrowser
+from datetime import date, datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request, Depends
+from typing import Dict, List, Optional
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pathlib import Path
 from pydantic import BaseModel, validator
 
 # Handle imports that work from both project root and src directory
 try:
-    from .version import get_version_string, get_full_version_info
-    from .logging_config import configure_logging
-    from .config import Config
-    from .database.init import init_database, check_database_connection
-    from .database.connection import get_db
-    from .database.repositories import ConfigRepository, CurrencyRepository
-    from .business.task_manager import TaskManager
-    from .business.rate_manager import RateManager
+    from .auth.dependencies import get_current_user, get_optional_user
+    from .auth.routes import router as auth_router
     from .business.currency_manager import CurrencyManager
     from .business.invoice_manager import InvoiceManager
-    from .auth.routes import router as auth_router
-    from .auth.dependencies import get_current_user, get_optional_user
+    from .business.rate_manager import RateManager
+    from .business.task_manager import TaskManager
+    from .config import Config
     from .database.auth_models import User
+    from .database.connection import get_db
+    from .database.init import check_database_connection, init_database
+    from .database.repositories import ConfigRepository, CurrencyRepository
+    from .logging_config import configure_logging
+    from .version import get_full_version_info, get_version_string
 except ImportError:
     # Fallback for when running from src directory
     from version import get_version_string, get_full_version_info
@@ -59,7 +59,9 @@ logger = logging.getLogger(__name__)
 # Initialize database
 logger.info("Initializing database...")
 if not check_database_connection():
-    logger.error("Database connection failed. Please check your database configuration.")
+    logger.error(
+        "Database connection failed. Please check your database configuration."
+    )
     exit(1)
 
 if not init_database():
@@ -74,7 +76,10 @@ DATA_DIR = Config.DATA_DIR
 # Initialize business managers (database-only)
 task_manager = TaskManager()
 currency_manager = CurrencyManager()
-invoice_manager = InvoiceManager(DATA_DIR, task_manager)  # Keep for invoice file exports
+invoice_manager = InvoiceManager(
+    DATA_DIR, task_manager
+)  # Keep for invoice file exports
+
 
 def initialize_application() -> None:
     """Initialize the application by creating necessary directories.
@@ -87,9 +92,12 @@ def initialize_application() -> None:
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
     except Exception:
-        logger.exception("Could not create data directory %s; falling back to cwd", DATA_DIR)
+        logger.exception(
+            "Could not create data directory %s; falling back to cwd", DATA_DIR
+        )
 
     logger.info("Application initialization complete")
+
 
 # Pydantic models for API requests
 class TimeEntry(BaseModel):
@@ -97,6 +105,7 @@ class TimeEntry(BaseModel):
     hours: float
     date: str
     description: Optional[str] = ""
+
 
 class TaskCreate(BaseModel):
     name: str
@@ -121,24 +130,47 @@ class TaskCreate(BaseModel):
         
         return v.strip()
 
+    @validator("name")
+    def validate_task_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Task name cannot be empty")
+
+        # Check for excessive spaces
+        if "  " in v:  # Multiple consecutive spaces
+            raise ValueError("Task name cannot contain multiple consecutive spaces.")
+
+        if v != v.strip():
+            raise ValueError("Task name cannot start or end with spaces.")
+
+        # Ensure reasonable length
+        if len(v) > 100:
+            raise ValueError("Task name must be 100 characters or less.")
+
+        return v.strip()
+
+
 class RateConfig(BaseModel):
     task_type: str
     day_rate: float
 
+
 class CurrencyConfig(BaseModel):
     currency: str  # Just the currency code
+
 
 # Load invoice columns config
 def load_invoice_columns():
     return invoice_manager.load_invoice_columns()
+
 
 # Save invoice columns config
 def save_invoice_columns(columns):
     return invoice_manager.save_invoice_columns(columns)
 
 
-
-app = FastAPI(title="ClockIt - Time Tracker", version=get_full_version_info()["version"])
+app = FastAPI(
+    title="ClockIt - Time Tracker", version=get_full_version_info()["version"]
+)
 
 # Add CORS middleware to allow frontend connections
 app.add_middleware(
@@ -160,30 +192,34 @@ initialize_application()
 # Include the authentication router
 app.include_router(auth_router, tags=["authentication"])
 
+
 # Version endpoint
 @app.get("/version")
 async def get_version():
     """Get application version information"""
     return get_full_version_info()
 
+
 @app.get("/")
 async def read_root():
     """
     API Server status endpoint
     """
-    return JSONResponse({
-        "message": "ClockIt API Server",
-        "status": "running", 
-        "version": get_version_string(),
-        "endpoints": {
-            "tasks": "/tasks",
-            "rates": "/rates",
-            "currency": "/currency", 
-            "invoice": "/invoice",
-            "health": "/health",
-            "docs": "/docs"
+    return JSONResponse(
+        {
+            "message": "ClockIt API Server",
+            "status": "running",
+            "version": get_version_string(),
+            "endpoints": {
+                "tasks": "/tasks",
+                "rates": "/rates",
+                "currency": "/currency",
+                "invoice": "/invoice",
+                "health": "/health",
+                "docs": "/docs",
+            },
         }
-    })
+    )
 
 
 # Task Management Endpoints
@@ -193,29 +229,30 @@ async def get_tasks(current_user: User = Depends(get_current_user)):
     tasks_data = task_manager.load_tasks_for_user(str(current_user.id))
     return tasks_data
 
+
 @app.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
     """Create a new task for authenticated user"""
     try:
         # The TaskCreate model validation will automatically check for problematic characters
         # If validation fails, Pydantic will raise a validation error
-        
+
         # Use task manager to create task with user context
         success = task_manager.create_task_for_user(
             name=task.name,
             user_id=str(current_user.id),
             description=task.description or "",
-            category=getattr(task, 'category', ''),
-            task_type=getattr(task, 'task_type', ''),
-            priority=getattr(task, 'priority', ''),
-            hourly_rate=getattr(task, 'hourly_rate', None)
+            category=getattr(task, "category", ""),
+            task_type=getattr(task, "task_type", ""),
+            priority=getattr(task, "priority", ""),
+            hourly_rate=getattr(task, "hourly_rate", None),
         )
-        
+
         if success:
             return {"message": "Task created successfully", "task_name": task.name}
         else:
             raise HTTPException(status_code=500, detail="Failed to create task")
-            
+
     except ValueError as e:
         # Handle validation errors from Pydantic
         raise HTTPException(status_code=400, detail=str(e))
@@ -223,58 +260,77 @@ async def create_task(task: TaskCreate, current_user: User = Depends(get_current
         logger.exception("Error creating task: %s", e)
         raise HTTPException(status_code=500, detail="Failed to create task")
 
+
 @app.post("/tasks/{task_id}/time")
-async def add_time_entry(task_id: int, time_entry: TimeEntry, current_user: User = Depends(get_current_user)):
+async def add_time_entry(
+    task_id: int, time_entry: TimeEntry, current_user: User = Depends(get_current_user)
+):
     """Add time entry to existing task by ID for authenticated user"""
     try:
         logger.info(f"Adding time entry for task ID: {task_id}")
-        
+
         success = task_manager.add_time_entry_by_id(
             task_id=task_id,
             duration=time_entry.hours,
             description=time_entry.description or "",
             date=time_entry.date,
-            user_id=str(current_user.id)
+            user_id=str(current_user.id),
         )
-        
+
         if success:
             # Get task details for response
             task = task_manager.get_task_by_id(task_id, str(current_user.id))
-            task_name = task['name'] if task else f"Task ID {task_id}"
-            return {"message": "Time entry added successfully", "task_name": task_name, "task_id": task_id}
+            task_name = task["name"] if task else f"Task ID {task_id}"
+            return {
+                "message": "Time entry added successfully",
+                "task_name": task_name,
+                "task_id": task_id,
+            }
         else:
-            raise HTTPException(status_code=404, detail=f"Task ID {task_id} not found or failed to add time entry")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Task ID {task_id} not found or failed to add time entry",
+            )
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Error adding time entry: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to add time entry: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add time entry: {str(e)}"
+        )
+
 
 @app.delete("/tasks/{task_id}")
 async def delete_task(task_id: int, current_user: User = Depends(get_current_user)):
     """Delete a task by ID for authenticated user"""
     try:
         logger.info(f"Deleting task ID: {task_id}")
-        
+
         # Get task details before deletion for response
         task = task_manager.get_task_by_id(task_id, str(current_user.id))
         if not task:
             raise HTTPException(status_code=404, detail=f"Task ID {task_id} not found")
-        
+
         success = task_manager.delete_task(
-            task_name=task['name'],
-            user_id=str(current_user.id)
+            task_name=task["name"], user_id=str(current_user.id)
         )
-        
+
         if success:
-            return {"message": "Task deleted successfully", "task_name": task['name'], "task_id": task_id}
+            return {
+                "message": "Task deleted successfully",
+                "task_name": task["name"],
+                "task_id": task_id,
+            }
         else:
-            raise HTTPException(status_code=500, detail=f"Failed to delete task ID {task_id}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to delete task ID {task_id}"
+            )
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Error deleting task: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
+
 
 # Rate Configuration Endpoints
 @app.get("/rates")
@@ -289,32 +345,37 @@ async def get_rates(current_user: User = Depends(get_current_user)):
         logger.error(f"Failed to load rates: {e}")
         raise HTTPException(status_code=500, detail="Failed to load rates")
 
+
 @app.post("/rates")
-async def set_rate(rate_config: RateConfig, current_user: User = Depends(get_current_user)):
+async def set_rate(
+    rate_config: RateConfig, current_user: User = Depends(get_current_user)
+):
     """Set day rate for a task type"""
     try:
         db = next(get_db())
         config_repo = ConfigRepository(db)
-        
+
         # Get existing rates
         rates = config_repo.get_config("rates", str(current_user.id)) or {}
         rates[rate_config.task_type] = rate_config.day_rate
-        
+
         # Save updated rates
         success = config_repo.save_config("rates", rates, str(current_user.id))
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to save rate configuration")
-        
+            raise HTTPException(
+                status_code=500, detail="Failed to save rate configuration"
+            )
+
         hourly_rate = rate_config.day_rate / 8  # Assuming 8-hour workday
-        
+
         # Get user's currency
         user_currency = config_repo.get_config("currency", str(current_user.id))
-        
+
         return {
             "message": f"Rate set for {rate_config.task_type}",
             "day_rate": rate_config.day_rate,
             "hourly_rate": hourly_rate,
-            "currency": user_currency
+            "currency": user_currency,
         }
     except HTTPException:
         raise
@@ -322,32 +383,37 @@ async def set_rate(rate_config: RateConfig, current_user: User = Depends(get_cur
         logger.error(f"Failed to set rate: {e}")
         raise HTTPException(status_code=500, detail="Failed to set rate")
 
+
 @app.put("/rates/{task_type}")
-async def update_rate(task_type: str, rate_config: RateConfig, current_user: User = Depends(get_current_user)):
+async def update_rate(
+    task_type: str,
+    rate_config: RateConfig,
+    current_user: User = Depends(get_current_user),
+):
     """Update existing rate for a task type"""
     try:
         db = next(get_db())
         config_repo = ConfigRepository(db)
-        
+
         rates = config_repo.get_config("rates", str(current_user.id)) or {}
-        
+
         if task_type not in rates:
             raise HTTPException(status_code=404, detail="Task type not found")
-        
+
         rates[task_type] = rate_config.day_rate
         success = config_repo.save_config("rates", rates, str(current_user.id))
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update rate")
-        
+
         hourly_rate = rate_config.day_rate / 8
         user_currency = config_repo.get_config("currency", str(current_user.id))
-        
+
         return {
             "message": f"Rate updated for {task_type}",
             "day_rate": rate_config.day_rate,
             "hourly_rate": hourly_rate,
-            "currency": user_currency
+            "currency": user_currency,
         }
     except HTTPException:
         raise
@@ -355,24 +421,25 @@ async def update_rate(task_type: str, rate_config: RateConfig, current_user: Use
         logger.error(f"Failed to update rate: {e}")
         raise HTTPException(status_code=500, detail="Failed to update rate")
 
+
 @app.delete("/rates/{task_type}")
 async def delete_rate(task_type: str, current_user: User = Depends(get_current_user)):
     """Delete a rate configuration"""
     try:
         db = next(get_db())
         config_repo = ConfigRepository(db)
-        
+
         rates = config_repo.get_config("rates", str(current_user.id)) or {}
-        
+
         if task_type not in rates:
             raise HTTPException(status_code=404, detail="Task type not found")
-        
+
         del rates[task_type]
         success = config_repo.save_config("rates", rates, str(current_user.id))
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to delete rate")
-        
+
         return {"message": f"Rate deleted for {task_type}"}
     except HTTPException:
         raise
@@ -380,18 +447,20 @@ async def delete_rate(task_type: str, current_user: User = Depends(get_current_u
         logger.error(f"Failed to delete rate: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete rate")
 
+
 # Currency Configuration Endpoints
 @app.get("/currency")
 async def get_currency(current_user: User = Depends(get_current_user)):
     """Get current currency configuration for the authenticated user"""
     db = next(get_db())
     config_repo = ConfigRepository(db)
-    
+
     user_currency = config_repo.get_config("currency", str(current_user.id))
     if not user_currency:
         raise HTTPException(status_code=404, detail="User currency not configured")
-    
+
     return {"currency": user_currency}
+
 
 @app.get("/currencies")
 async def get_currencies(current_user: User = Depends(get_current_user)):
@@ -404,7 +473,10 @@ async def get_currencies(current_user: User = Depends(get_current_user)):
         return {"currencies": currencies}
     except Exception as e:
         logger.error(f"Failed to load currencies from database: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load currencies from database")
+        raise HTTPException(
+            status_code=500, detail="Failed to load currencies from database"
+        )
+
 
 @app.get("/currency/available")
 async def get_available_currencies(current_user: User = Depends(get_current_user)):
@@ -414,28 +486,34 @@ async def get_available_currencies(current_user: User = Depends(get_current_user
     currencies = currency_repo.get_all_currencies()
     return {"currencies": currencies}
 
+
 @app.post("/currency")
-async def set_currency(currency_config: CurrencyConfig, current_user: User = Depends(get_current_user)):
+async def set_currency(
+    currency_config: CurrencyConfig, current_user: User = Depends(get_current_user)
+):
     """Set the application currency for the authenticated user"""
     db = next(get_db())
     currency_repo = CurrencyRepository(db)
-    
+
     # Verify currency exists in database
     currency_data = currency_repo.get_currency_by_code(currency_config.currency)
     if not currency_data:
         raise HTTPException(status_code=400, detail="Unsupported currency code")
-    
+
     # Save user's currency preference
     config_repo = ConfigRepository(db)
     success = config_repo.save_config("currency", currency_data, str(current_user.id))
-    
+
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to save currency configuration")
-    
+        raise HTTPException(
+            status_code=500, detail="Failed to save currency configuration"
+        )
+
     return {
         "message": f"Currency set to {currency_data['name']}",
-        "currency": currency_data
+        "currency": currency_data,
     }
+
 
 # Categories Endpoints
 @app.get("/categories")
@@ -445,7 +523,7 @@ async def get_categories(current_user: User = Depends(get_current_user)):
         db = next(get_db())
         config_repo = ConfigRepository(db)
         rates = config_repo.get_config("rates", str(current_user.id)) or {}
-        
+
         # Return sorted list of task types that have rates configured
         categories = sorted(list(rates.keys()))
         return {"categories": categories}
@@ -453,58 +531,64 @@ async def get_categories(current_user: User = Depends(get_current_user)):
         logger.error(f"Failed to load categories: {e}")
         raise HTTPException(status_code=500, detail="Failed to load categories")
 
+
 # Invoice Generation Endpoints
 @app.post("/invoice/generate")
 async def generate_invoice(current_user: User = Depends(get_current_user)):
     """Generate invoice from non-exported tasks"""
     try:
         result = invoice_manager.generate_invoice(include_exported=False)
-        
+
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])
-        
+
         # Export the invoice data
         if invoice_manager.export_invoice(result):
             # Create CSV content manually since create_csv_export doesn't exist
             csv_lines = []
             csv_lines.append("Description,Hours,Rate,Amount")
-            
+
             for item in result.get("items", []):
-                csv_lines.append(f"\"{item.get('description', 'N/A')}\",{item.get('hours', 0):.2f},{item.get('rate', 0):.2f},{item.get('amount', 0):.2f}")
-            
-            csv_lines.append(f"Total,,{result.get('total_hours', 0):.2f},{result.get('total_amount', 0):.2f}")
+                csv_lines.append(
+                    f"\"{item.get('description', 'N/A')}\",{item.get('hours', 0):.2f},{item.get('rate', 0):.2f},{item.get('amount', 0):.2f}"
+                )
+
+            csv_lines.append(
+                f"Total,,{result.get('total_hours', 0):.2f},{result.get('total_amount', 0):.2f}"
+            )
             csv_content = "\n".join(csv_lines)
-            
+
             # Return as downloadable file
             from fastapi.responses import Response
-            
+
             filename = f"invoice-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
-            
+
             return Response(
                 content=csv_content,
                 media_type="text/csv",
-                headers={
-                    "Content-Disposition": f"attachment; filename={filename}"
-                }
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
         else:
             raise HTTPException(status_code=500, detail="Failed to export invoice")
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Error generating invoice: %s", e)
-        raise HTTPException(status_code=500, detail=f"Error generating invoice: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error generating invoice: {str(e)}"
+        )
+
 
 @app.get("/invoice/preview")
 async def preview_invoice(current_user: User = Depends(get_current_user)):
     """Preview invoice without marking tasks as exported"""
     try:
         result = invoice_manager.generate_invoice(include_exported=False)
-        
+
         if "error" in result:
             return {"preview": result["error"], "status": "no_data"}
-        
+
         # Format the preview text
         preview_lines = []
         preview_lines.append("=== INVOICE PREVIEW ===")
@@ -532,6 +616,18 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
             "status": "error"
         }
 
+            preview_lines.append("")
+            preview_lines.append(
+                f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}"
+            )
+            preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
+
+        preview_text = "\n".join(preview_lines)
+
+        return {"preview": preview_text, "status": "success"}
+    except Exception as e:
+        logger.exception("Error generating invoice preview: %s", e)
+        return {"preview": f"Error generating preview: {str(e)}", "status": "error"}
 
 
 # System Control Endpoints
@@ -541,23 +637,24 @@ async def health_check():
     try:
         # Basic health checks
         data_dir_accessible = DATA_DIR.exists() and DATA_DIR.is_dir()
-        
+
         # Check database connection
         db_healthy = check_database_connection()
-        
+
         # Check if task system is loadable (basic functionality test)
         tasks_loadable = True
         try:
             # Simple test to see if we can instantiate task manager
             from business.task_manager import TaskManager
+
             tm = TaskManager()
             tasks_loadable = True
         except Exception as e:
             logger.warning(f"Task system check failed: {e}")
             tasks_loadable = False
-        
+
         overall_healthy = db_healthy and tasks_loadable
-        
+
         return {
             "status": "healthy" if overall_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
@@ -565,11 +662,12 @@ async def health_check():
             "data_directory_accessible": data_dir_accessible,
             "database_healthy": db_healthy,
             "tasks_loadable": tasks_loadable,
-            "storage_type": "postgresql"
+            "storage_type": "postgresql",
         }
     except Exception as e:
         logger.exception("Health check failed")
         raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+
 
 @app.get("/system/data-location")
 async def get_data_location(current_user: User = Depends(get_current_user)):
@@ -578,33 +676,33 @@ async def get_data_location(current_user: User = Depends(get_current_user)):
         "database_type": Config.DATABASE_TYPE,
         "data_storage": "PostgreSQL Database",
         "data_directory": str(DATA_DIR),  # Only used for invoice exports
-        "status": "database_only"
+        "status": "database_only",
     }
+
 
 @app.post("/system/shutdown")
 async def shutdown_application(current_user: User = Depends(get_current_user)):
     """Shutdown the application gracefully"""
     import threading
     import time
-    
+
     def delayed_shutdown():
         time.sleep(1)  # Give response time to be sent
         print("\n🛑 Shutdown requested from web interface...")
         print("💾 All data has been saved automatically")
         print("👋 Thank you for using ClockIt!")
         os._exit(0)  # Force exit
-    
+
     # Start shutdown in background thread
     shutdown_thread = threading.Thread(target=delayed_shutdown, daemon=True)
     shutdown_thread.start()
-    
+
     return {"message": "Shutdown initiated"}
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
-        app, 
-        host=Config.HOST, 
-        port=Config.PORT,
-        log_level=Config.LOG_LEVEL.lower()
+        app, host=Config.HOST, port=Config.PORT, log_level=Config.LOG_LEVEL.lower()
     )

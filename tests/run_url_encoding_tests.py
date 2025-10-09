@@ -6,9 +6,9 @@ This script runs the automated tests for the URL encoding fix
 and provides detailed output about the test results.
 """
 
-import sys
 import os
 import subprocess
+import sys
 import urllib.parse
 from pathlib import Path
 
@@ -17,14 +17,15 @@ project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
 sys.path.insert(0, str(src_path))
 
+
 def test_url_encoding_manually():
     """Manual test of URL encoding scenarios"""
     print("🧪 Manual URL Encoding Tests")
     print("=" * 50)
-    
+
     test_cases = [
         "General IT/Tech work",
-        "Project A/B Testing", 
+        "Project A/B Testing",
         "Client/Server Development",
         "UI/UX Design",
         "Data Analysis & Reports",
@@ -55,29 +56,30 @@ def test_api_endpoints():
     """Test API endpoints with curl"""
     print("\n🌐 API Endpoint Tests")
     print("=" * 50)
-    
+
     # Check if backend is running
     try:
         result = subprocess.run(
             ["curl", "-s", "http://localhost:8001/health"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
-        
+
         if result.returncode == 0:
             print("✅ Backend is running on http://localhost:8001")
             return True
         else:
             print("❌ Backend is not responding")
             return False
-            
+
     except subprocess.TimeoutExpired:
         print("❌ Backend health check timed out")
         return False
     except FileNotFoundError:
         print("❌ curl command not found")
         return False
+
 
 def run_pytest():
     """Run pytest on the URL encoding test file"""
@@ -92,19 +94,20 @@ def run_pytest():
             [sys.executable, "-m", "pytest", str(test_file), "-v", "--tb=short"],
             cwd=project_root,
             env={**os.environ, "PYTHONPATH": str(src_path)},
-            text=True
+            text=True,
         )
-        
+
         if result.returncode == 0:
             print("✅ All pytest tests passed!")
             return True
         else:
             print("❌ Some pytest tests failed")
             return False
-            
+
     except FileNotFoundError:
         print("❌ pytest not found. Install with: pip install pytest")
         return False
+
 
 def main():
     """Run all tests"""
@@ -145,8 +148,9 @@ def main():
     else:
         print("\n🔧 Some tests failed. Please review the output above.")
         print("   Make sure the backend is running on http://localhost:8001")
-    
+
     return 0 if all_passed else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
