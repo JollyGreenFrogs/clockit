@@ -7,7 +7,7 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
   const [startTime, setStartTime] = useState(null)
   const [breakMinutes, setBreakMinutes] = useState(0)
   const [showBreakSection, setShowBreakSection] = useState(false)
-  const [selectedTask, setSelectedTask] = useState('')
+  const [selectedTask, setSelectedTask] = useState('')  // This will now store task ID
   const [taskForTiming, setTaskForTiming] = useState('')
 
   useEffect(() => {
@@ -71,6 +71,7 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
     const finalTime = Math.max(0, time - breakTime)
     
     if (onSaveToTask) {
+      // selectedTask is now a task ID, so pass it directly
       onSaveToTask(selectedTask, finalTime)
       resetTimer()
     }
@@ -97,7 +98,20 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
     return Math.max(0, time - breakTime)
   }
 
-  const taskList = Object.keys(tasks || {})
+  // Convert tasks array to usable format
+  const taskList = Array.isArray(tasks) ? tasks : []
+  
+  // Helper function to find task ID by name
+  const getTaskIdByName = (taskName) => {
+    const task = taskList.find(t => t.name === taskName)
+    return task ? task.id : null
+  }
+  
+  // Helper function to find task name by ID
+  const getTaskNameById = (taskId) => {
+    const task = taskList.find(t => t.id === parseInt(taskId))
+    return task ? task.name : ''
+  }
 
   return (
     <div className="stopwatch-widget">
@@ -111,8 +125,8 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
               onChange={(e) => setTaskForTiming(e.target.value)}
             >
               <option value="">Select task (optional)</option>
-              {taskList.map(taskName => (
-                <option key={taskName} value={taskName}>{taskName}</option>
+              {taskList.map(task => (
+                <option key={task.id} value={task.name}>{task.name}</option>
               ))}
             </select>
           </div>
@@ -195,8 +209,8 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
               onChange={(e) => setSelectedTask(e.target.value)}
             >
               <option value="">Select task to save time to</option>
-              {taskList.map(taskName => (
-                <option key={taskName} value={taskName}>{taskName}</option>
+              {taskList.map(task => (
+                <option key={task.id} value={task.id}>{task.name}</option>
               ))}
             </select>
             <button 
@@ -207,9 +221,9 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
               💾 Save Time ({formatTime(getFinalTime())})
             </button>
           </div>
-          {taskForTiming && taskForTiming !== selectedTask && (
+          {taskForTiming && taskForTiming !== getTaskNameById(selectedTask) && (
             <button 
-              onClick={() => setSelectedTask(taskForTiming)}
+              onClick={() => setSelectedTask(getTaskIdByName(taskForTiming))}
               className="btn btn-secondary"
               style={{ marginTop: '10px' }}
             >

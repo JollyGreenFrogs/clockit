@@ -15,11 +15,11 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
 
 from .auth_models import User  # Import User model
 from .connection import Base
+from .types import JSON, UUID
 
 
 class UserConfig(Base):
@@ -28,9 +28,7 @@ class UserConfig(Base):
     __tablename__ = "user_configs"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False
-    )
+    user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
     config_type = Column(String, index=True)  # 'currency', 'rates', etc.
     config_data = Column(JSON)  # Store config as JSON (encrypted at rest)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -43,9 +41,7 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False
-    )
+    user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
     name = Column(String, index=True)
     description = Column(Text, nullable=True)
     category = Column(String, nullable=True, index=True)
@@ -66,9 +62,7 @@ class TimeEntry(Base):
     __tablename__ = "time_entries"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False
-    )
+    user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)  # Link to task
     task_name = Column(String, index=True)  # Denormalized for reporting
     duration = Column(Float)  # Duration in milliseconds
@@ -85,9 +79,7 @@ class Category(Base):
     __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False
-    )
+    user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
     name = Column(String, index=True)  # Unique per user, not globally
     description = Column(Text, nullable=True)
     color = Column(String, nullable=True)  # For UI theming

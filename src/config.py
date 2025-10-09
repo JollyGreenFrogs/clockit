@@ -42,16 +42,25 @@ class Config:
     POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
 
     # Authentication (for future implementation)
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "test-secret-key-for-development-only")
     JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
     JWT_EXPIRATION_HOURS = int(os.environ.get("JWT_EXPIRATION_HOURS", "24"))
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(
+        os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    BCRYPT_ROUNDS = int(os.environ.get("BCRYPT_ROUNDS", "12"))
 
     MS_TENANT_ID = os.environ.get("MS_TENANT_ID")
     MS_CLIENT_ID = os.environ.get("MS_CLIENT_ID")
     MS_CLIENT_SECRET = os.environ.get("MS_CLIENT_SECRET")
 
     # Logging
-    LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
+    # CORS configuration
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
+    ALLOWED_ORIGINS = CORS_ORIGINS  # Alias for CORS_ORIGINS.upper()
     LOG_FORMAT = os.environ.get(
         "LOG_FORMAT", "json" if ENVIRONMENT == "production" else "text"
     )
@@ -89,7 +98,10 @@ class Config:
 
         # Production environment validations
         if cls.ENVIRONMENT == "production":
-            if not cls.SECRET_KEY:
+            if (
+                not cls.SECRET_KEY
+                or cls.SECRET_KEY == "test-secret-key-for-development-only"
+            ):
                 logger.error("SECRET_KEY must be set in production")
                 valid = False
             if cls.DEBUG:
@@ -111,7 +123,17 @@ class Config:
     def get_database_url(cls) -> Optional[str]:
         """Get the appropriate database URL based on configuration"""
         if cls.DATABASE_TYPE == "postgres":
+            # Generate DATABASE_URL if not set
+            if not cls.DATABASE_URL:
+                cls.DATABASE_URL = (
+                    f"postgresql://{cls.POSTGRES_USER}:{cls.POSTGRES_PASSWORD}@"
+                    f"{cls.POSTGRES_HOST}:{cls.POSTGRES_PORT}/{cls.POSTGRES_DB}"
+                )
             return cls.DATABASE_URL
+        elif cls.DATABASE_TYPE == "file":
+            # Generate SQLite URL for file-based storage
+            db_path = cls.DATA_DIR / "clockit.db"
+            return f"sqlite:///{db_path}"
         return None
 
     @classmethod

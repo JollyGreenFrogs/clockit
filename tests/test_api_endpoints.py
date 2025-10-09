@@ -32,6 +32,36 @@ def temp_data_dir():
             yield Path(temp_dir)
 
 
+def get_auth_headers(client):
+    """Helper function to create a user and return auth headers"""
+    import uuid
+
+    unique_id = str(uuid.uuid4())[:8]
+    user_data = {
+        "username": f"testuser_{unique_id}",
+        "email": f"test_{unique_id}@example.com",
+        "password": "testpass123",
+        "full_name": "Test User",
+    }
+
+    # Register user
+    register_response = client.post("/auth/register", json=user_data)
+    assert register_response.status_code == 200
+
+    # Login to get token
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email_or_username": user_data["username"],
+            "password": user_data["password"],
+        },
+    )
+    assert login_response.status_code == 200
+    tokens = login_response.json()
+
+    return {"Authorization": f"Bearer {tokens['access_token']}"}
+
+
 def test_health_check_endpoint(client, temp_data_dir):
     """Test the health check endpoint"""
     response = client.get("/health")
@@ -66,76 +96,120 @@ def test_health_check_with_missing_data_dir(client):
 
 def test_system_data_location_endpoint(client, temp_data_dir):
     """Test the system data location endpoint"""
-    response = client.get("/system/data-location")
+    # This endpoint requires authentication, so we need to create a user and login first
+    # Register a user with unique credentials
+    import uuid
+
+    unique_id = str(uuid.uuid4())[:8]
+    user_data = {
+        "username": f"testuser_sysinfo_{unique_id}",
+        "email": f"test_sysinfo_{unique_id}@example.com",
+        "password": "testpass123",
+        "full_name": "Test User",
+    }
+    register_response = client.post("/auth/register", json=user_data)
+    assert register_response.status_code == 200
+
+    # Login to get token
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email_or_username": user_data["username"],
+            "password": user_data["password"],
+        },
+    )
+    assert login_response.status_code == 200
+    tokens = login_response.json()
+
+    # Use token to access system endpoint
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = client.get("/system/data-location", headers=headers)
 
     assert response.status_code == 200
     data = response.json()
 
-    # Check required fields
+    # Check required fields for current database-based implementation
+    assert "database_type" in data
+    assert "data_storage" in data
     assert "data_directory" in data
-    assert "tasks_file" in data
-    assert "rates_file" in data
-    assert "exported_file" in data
+    assert "status" in data
 
-    # Check that paths are strings
+    # Check that values are as expected
     assert isinstance(data["data_directory"], str)
-    assert isinstance(data["tasks_file"], str)
+    assert data["status"] == "database_only"
 
 
 def test_tasks_endpoint_basic(client, temp_data_dir):
     """Test basic tasks endpoint functionality"""
+    # Get auth headers
+    headers = get_auth_headers(client)
+
     # Get tasks (should return empty initially)
-    response = client.get("/tasks")
+    response = client.get("/tasks", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert "tasks" in data
-    assert isinstance(data["tasks"], dict)
 
 
 def test_create_task_endpoint(client, temp_data_dir):
     """Test creating a task via API"""
+    # Get auth headers
+    headers = get_auth_headers(client)
+
     task_data = {
         "name": "Test Task",
         "description": "A test task",
         "parent_heading": "Development",
     }
 
-    response = client.post("/tasks", json=task_data)
+    response = client.post("/tasks", json=task_data, headers=headers)
     assert response.status_code == 200
 
     data = response.json()
     assert "message" in data
-    assert "task" in data
-    assert data["task"]["name"] == "Test Task"
+    assert "task_name" in data
+    assert data["task_name"] == "Test Task"
 
 
 def test_categories_endpoint(client, temp_data_dir):
     """Test the categories endpoint"""
-    response = client.get("/categories")
+    # Get auth headers
+    headers = get_auth_headers(client)
+
+    response = client.get("/categories", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
-    assert isinstance(data, list)
+    assert "categories" in data
+    assert isinstance(data["categories"], list)
 
 
 def test_currency_endpoints(client, temp_data_dir):
     """Test currency-related endpoints"""
+    # Get auth headers
+    headers = get_auth_headers(client)
+
     # Get available currencies
-    response = client.get("/currencies")
+    response = client.get("/currencies", headers=headers)
     assert response.status_code == 200
 
     # Get current currency
-    response = client.get("/currency")
+    response = client.get("/currency", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert "code" in data
-    assert "symbol" in data
-    assert "name" in data
+    assert "currency" in data
+    currency = data["currency"]
+    assert "code" in currency
+    assert "symbol" in currency
+    assert "name" in currency
 
 
 def test_rates_endpoint(client, temp_data_dir):
     """Test rates configuration endpoint"""
-    response = client.get("/rates")
+    # Get auth headers
+    headers = get_auth_headers(client)
+
+    response = client.get("/rates", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
@@ -144,12 +218,19 @@ def test_rates_endpoint(client, temp_data_dir):
 
 def test_invoice_preview_endpoint(client, temp_data_dir):
     """Test invoice preview endpoint"""
-    response = client.get("/invoice/preview")
+    # Get auth headers
+    headers = get_auth_headers(client)
+
+    response = client.get("/invoice/preview", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
-    assert "invoice" in data
-    assert "message" in data
+    assert "status" in data
+    # When no tasks exist, we get a preview message instead of invoice data
+    if data["status"] == "no_data":
+        assert "preview" in data
+    else:
+        assert "invoice" in data
 
 
 @pytest.mark.parametrize(

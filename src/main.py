@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import signal
 import threading
+import urllib.parse
 import webbrowser
 from datetime import date, datetime
 from pathlib import Path
@@ -10,7 +12,7 @@ from typing import Dict, List, Optional
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 # Handle imports that work from both project root and src directory
 try:
@@ -110,6 +112,24 @@ class TaskCreate(BaseModel):
     description: Optional[str] = ""
     parent_heading: Optional[str] = ""
 
+    @validator("name")
+    def validate_task_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Task name cannot be empty")
+
+        # Check for excessive spaces
+        if "  " in v:  # Multiple consecutive spaces
+            raise ValueError("Task name cannot contain multiple consecutive spaces.")
+
+        if v != v.strip():
+            raise ValueError("Task name cannot start or end with spaces.")
+
+        # Ensure reasonable length
+        if len(v) > 100:
+            raise ValueError("Task name must be 100 characters or less.")
+
+        return v.strip()
+
 
 class RateConfig(BaseModel):
     task_type: str
@@ -195,53 +215,103 @@ async def get_tasks(current_user: User = Depends(get_current_user)):
 @app.post("/tasks")
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user)):
     """Create a new task for authenticated user"""
-    # Use task manager to create task with user context
-    success = task_manager.create_task_for_user(
-        name=task.name,
-        user_id=str(current_user.id),
-        description=task.description or "",
-        category=getattr(task, "category", ""),
-        task_type=getattr(task, "task_type", ""),
-        priority=getattr(task, "priority", ""),
-        hourly_rate=getattr(task, "hourly_rate", None),
-    )
+    try:
+        # The TaskCreate model validation will automatically check for problematic characters
+        # If validation fails, Pydantic will raise a validation error
 
-    if success:
-        return {"message": "Task created successfully", "task_name": task.name}
-    else:
+        # Use task manager to create task with user context
+        success = task_manager.create_task_for_user(
+            name=task.name,
+            user_id=str(current_user.id),
+            description=task.description or "",
+            category=getattr(task, "category", ""),
+            task_type=getattr(task, "task_type", ""),
+            priority=getattr(task, "priority", ""),
+            hourly_rate=getattr(task, "hourly_rate", None),
+        )
+
+        if success:
+            return {"message": "Task created successfully", "task_name": task.name}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create task")
+
+    except ValueError as e:
+        # Handle validation errors from Pydantic
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Error creating task: %s", e)
         raise HTTPException(status_code=500, detail="Failed to create task")
 
 
 @app.post("/tasks/{task_id}/time")
 async def add_time_entry(
-    task_id: str, time_entry: TimeEntry, current_user: User = Depends(get_current_user)
+    task_id: int, time_entry: TimeEntry, current_user: User = Depends(get_current_user)
 ):
-    """Add time entry to existing task for authenticated user"""
-    success = task_manager.add_time_entry(
-        task_name=task_id,  # Note: This assumes task_id is actually task name
-        duration=time_entry.hours,
-        description=time_entry.description or "",
-        date=time_entry.date,
-        user_id=str(current_user.id),
-    )
+    """Add time entry to existing task by ID for authenticated user"""
+    try:
+        logger.info(f"Adding time entry for task ID: {task_id}")
 
-    if success:
-        return {"message": "Time entry added successfully"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to add time entry")
+        success = task_manager.add_time_entry_by_id(
+            task_id=task_id,
+            duration=time_entry.hours,
+            description=time_entry.description or "",
+            date=time_entry.date,
+            user_id=str(current_user.id),
+        )
+
+        if success:
+            # Get task details for response
+            task = task_manager.get_task_by_id(task_id, str(current_user.id))
+            task_name = task["name"] if task else f"Task ID {task_id}"
+            return {
+                "message": "Time entry added successfully",
+                "task_name": task_name,
+                "task_id": task_id,
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Task ID {task_id} not found or failed to add time entry",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error adding time entry: %s", e)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add time entry: {str(e)}"
+        )
 
 
-@app.delete("/tasks/{task_name}")
-async def delete_task(task_name: str, current_user: User = Depends(get_current_user)):
-    """Delete a task for authenticated user"""
-    success = task_manager.delete_task(
-        task_name=task_name, user_id=str(current_user.id)
-    )
+@app.delete("/tasks/{task_id}")
+async def delete_task(task_id: int, current_user: User = Depends(get_current_user)):
+    """Delete a task by ID for authenticated user"""
+    try:
+        logger.info(f"Deleting task ID: {task_id}")
 
-    if success:
-        return {"message": "Task deleted successfully"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to delete task")
+        # Get task details before deletion for response
+        task = task_manager.get_task_by_id(task_id, str(current_user.id))
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task ID {task_id} not found")
+
+        success = task_manager.delete_task(
+            task_name=task["name"], user_id=str(current_user.id)
+        )
+
+        if success:
+            return {
+                "message": "Task deleted successfully",
+                "task_name": task["name"],
+                "task_id": task_id,
+            }
+        else:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to delete task ID {task_id}"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error deleting task: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
 
 
 # Rate Configuration Endpoints
@@ -448,22 +518,83 @@ async def get_categories(current_user: User = Depends(get_current_user)):
 @app.post("/invoice/generate")
 async def generate_invoice(current_user: User = Depends(get_current_user)):
     """Generate invoice from non-exported tasks"""
-    # TODO: Implement database-based invoice generation
-    # This will use TaskRepository to get user tasks and ConfigRepository for rates
-    return {
-        "message": "Invoice generation feature coming soon",
-        "status": "not_implemented",
-    }
+    try:
+        result = invoice_manager.generate_invoice(include_exported=False)
+
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        # Export the invoice data
+        if invoice_manager.export_invoice(result):
+            # Create CSV content manually since create_csv_export doesn't exist
+            csv_lines = []
+            csv_lines.append("Description,Hours,Rate,Amount")
+
+            for item in result.get("items", []):
+                csv_lines.append(
+                    f"\"{item.get('description', 'N/A')}\",{item.get('hours', 0):.2f},{item.get('rate', 0):.2f},{item.get('amount', 0):.2f}"
+                )
+
+            csv_lines.append(
+                f"Total,,{result.get('total_hours', 0):.2f},{result.get('total_amount', 0):.2f}"
+            )
+            csv_content = "\n".join(csv_lines)
+
+            # Return as downloadable file
+            from fastapi.responses import Response
+
+            filename = f"invoice-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
+
+            return Response(
+                content=csv_content,
+                media_type="text/csv",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Failed to export invoice")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error generating invoice: %s", e)
+        raise HTTPException(
+            status_code=500, detail=f"Error generating invoice: {str(e)}"
+        )
 
 
 @app.get("/invoice/preview")
 async def preview_invoice(current_user: User = Depends(get_current_user)):
     """Preview invoice without marking tasks as exported"""
-    # TODO: Implement database-based invoice preview
-    return {
-        "message": "Invoice preview feature coming soon",
-        "status": "not_implemented",
-    }
+    try:
+        result = invoice_manager.generate_invoice(include_exported=False)
+
+        if "error" in result:
+            return {"preview": result["error"], "status": "no_data"}
+
+        # Format the preview text
+        preview_lines = []
+        preview_lines.append("=== INVOICE PREVIEW ===")
+        preview_lines.append("")
+
+        if "items" in result:
+            preview_lines.append("ITEMS:")
+            for item in result["items"]:
+                preview_lines.append(
+                    f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}"
+                )
+
+            preview_lines.append("")
+            preview_lines.append(
+                f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}"
+            )
+            preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
+
+        preview_text = "\n".join(preview_lines)
+
+        return {"preview": preview_text, "status": "success"}
+    except Exception as e:
+        logger.exception("Error generating invoice preview: %s", e)
+        return {"preview": f"Error generating preview: {str(e)}", "status": "error"}
 
 
 # System Control Endpoints
@@ -477,12 +608,27 @@ async def health_check():
         # Check database connection
         db_healthy = check_database_connection()
 
+        # Check if task system is loadable (basic functionality test)
+        tasks_loadable = True
+        try:
+            # Simple test to see if we can instantiate task manager
+            from business.task_manager import TaskManager
+
+            tm = TaskManager()
+            tasks_loadable = True
+        except Exception as e:
+            logger.warning(f"Task system check failed: {e}")
+            tasks_loadable = False
+
+        overall_healthy = db_healthy and tasks_loadable
+
         return {
-            "status": "healthy" if db_healthy else "unhealthy",
+            "status": "healthy" if overall_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
             "version": get_version_string(),
             "data_directory_accessible": data_dir_accessible,
             "database_healthy": db_healthy,
+            "tasks_loadable": tasks_loadable,
             "storage_type": "postgresql",
         }
     except Exception as e:
@@ -504,6 +650,7 @@ async def get_data_location(current_user: User = Depends(get_current_user)):
 @app.post("/system/shutdown")
 async def shutdown_application(current_user: User = Depends(get_current_user)):
     """Shutdown the application gracefully"""
+    import threading
     import time
 
     def delayed_shutdown():
