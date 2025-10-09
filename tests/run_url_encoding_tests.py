@@ -31,27 +31,26 @@ def test_url_encoding_manually():
         "Data Analysis & Reports",
         "Meeting (Project #1)",
     ]
-
+    
     all_passed = True
-
+    
     for task_name in test_cases:
         encoded = urllib.parse.quote(task_name)
         decoded = urllib.parse.unquote(encoded)
-
+        
         print(f"Original:  '{task_name}'")
         print(f"Encoded:   '{encoded}'")
         print(f"Decoded:   '{decoded}'")
-
+        
         if decoded == task_name:
             print("✅ PASS: Round-trip encoding/decoding successful")
         else:
             print("❌ FAIL: Round-trip encoding/decoding failed")
             all_passed = False
-
+        
         print("-" * 30)
-
+    
     return all_passed
-
 
 def test_api_endpoints():
     """Test API endpoints with curl"""
@@ -86,9 +85,9 @@ def run_pytest():
     """Run pytest on the URL encoding test file"""
     print("\n🧪 Running Automated Tests with pytest")
     print("=" * 50)
-
+    
     test_file = Path(__file__).parent / "test_url_encoding_fix.py"
-
+    
     try:
         # Run pytest with verbose output
         result = subprocess.run(
@@ -114,37 +113,35 @@ def main():
     """Run all tests"""
     print("🔧 ClockIt URL Encoding Fix - Test Suite")
     print("=" * 60)
-
+    
     results = []
-
+    
     # Test 1: Manual URL encoding tests
     print("\n📋 Test 1: URL Encoding/Decoding Logic")
     results.append(test_url_encoding_manually())
-
+    
     # Test 2: Check if backend is running
     print("\n📋 Test 2: Backend Availability")
     results.append(test_api_endpoints())
-
+    
     # Test 3: Run automated tests
     print("\n📋 Test 3: Automated Test Suite")
     results.append(run_pytest())
-
+    
     # Summary
     print("\n📊 Test Summary")
     print("=" * 50)
-
+    
     test_names = ["URL Encoding Logic", "Backend Availability", "Automated Tests"]
-
+    
     for i, (name, passed) in enumerate(zip(test_names, results)):
         status = "✅ PASS" if passed else "❌ FAIL"
         print(f"{i+1}. {name}: {status}")
-
+    
     all_passed = all(results)
-
-    print(
-        f"\n🎯 Overall Result: {'✅ ALL TESTS PASSED' if all_passed else '❌ SOME TESTS FAILED'}"
-    )
-
+    
+    print(f"\n🎯 Overall Result: {'✅ ALL TESTS PASSED' if all_passed else '❌ SOME TESTS FAILED'}")
+    
     if all_passed:
         print("\n🚀 The URL encoding fix is working correctly!")
         print("   You can now deploy to production with confidence.")

@@ -21,10 +21,10 @@ from database.repositories import (
 
 class TaskManager:
     """Handles all task-related business operations"""
-
+    
     def __init__(self, data_dir=None):
         """Initialize TaskManager
-
+        
         Args:
             data_dir: Legacy parameter for backwards compatibility, ignored in database version
         """

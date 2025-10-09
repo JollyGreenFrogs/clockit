@@ -111,6 +111,24 @@ class TaskCreate(BaseModel):
     name: str
     description: Optional[str] = ""
     parent_heading: Optional[str] = ""
+    
+    @validator('name')
+    def validate_task_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Task name cannot be empty')
+        
+        # Check for excessive spaces
+        if '  ' in v:  # Multiple consecutive spaces
+            raise ValueError('Task name cannot contain multiple consecutive spaces.')
+        
+        if v != v.strip():
+            raise ValueError('Task name cannot start or end with spaces.')
+        
+        # Ensure reasonable length
+        if len(v) > 100:
+            raise ValueError('Task name must be 100 characters or less.')
+        
+        return v.strip()
 
     @validator("name")
     def validate_task_name(cls, v):
@@ -575,13 +593,28 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
         preview_lines = []
         preview_lines.append("=== INVOICE PREVIEW ===")
         preview_lines.append("")
-
+        
         if "items" in result:
             preview_lines.append("ITEMS:")
             for item in result["items"]:
-                preview_lines.append(
-                    f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}"
-                )
+                preview_lines.append(f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}")
+            
+            preview_lines.append("")
+            preview_lines.append(f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}")
+            preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
+        
+        preview_text = "\n".join(preview_lines)
+        
+        return {
+            "preview": preview_text,
+            "status": "success"
+        }
+    except Exception as e:
+        logger.exception("Error generating invoice preview: %s", e)
+        return {
+            "preview": f"Error generating preview: {str(e)}",
+            "status": "error"
+        }
 
             preview_lines.append("")
             preview_lines.append(

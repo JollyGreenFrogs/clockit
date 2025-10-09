@@ -134,10 +134,13 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(refresh_request: RefreshRequest, db: Session = Depends(get_db)):
+async def refresh_token(
+    refresh_request: RefreshRequest,
+    db: Session = Depends(get_db)
+):
     """Refresh access token using refresh token"""
     auth_service = AuthService(db)
-
+    
     payload = auth_service.verify_token(refresh_request.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(

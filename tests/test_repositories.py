@@ -45,6 +45,22 @@ class TestTaskRepository:
     @pytest.fixture
     def test_user_id(self, test_db_session):
         """Create a test user and return its ID"""
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
+        user = User(
+            id=uuid.uuid4(),
+            username=f"testuser_{unique_id}",
+            email=f"test_{unique_id}@example.com",
+            hashed_password="hashed_password",
+            is_active=True
+        )
+        test_db_session.add(user)
+        test_db_session.commit()
+        return str(user.id)
+    
+    @pytest.fixture
+    def test_user_id(self, test_db_session):
+        """Create a test user and return its ID"""
         user = User(
             id=uuid.uuid4(),
             username="testuser",

@@ -35,30 +35,26 @@ def temp_data_dir():
 def get_auth_headers(client):
     """Helper function to create a user and return auth headers"""
     import uuid
-
     unique_id = str(uuid.uuid4())[:8]
     user_data = {
         "username": f"testuser_{unique_id}",
-        "email": f"test_{unique_id}@example.com",
+        "email": f"test_{unique_id}@example.com", 
         "password": "testpass123",
-        "full_name": "Test User",
+        "full_name": "Test User"
     }
-
+    
     # Register user
     register_response = client.post("/auth/register", json=user_data)
     assert register_response.status_code == 200
-
+    
     # Login to get token
-    login_response = client.post(
-        "/auth/login",
-        json={
-            "email_or_username": user_data["username"],
-            "password": user_data["password"],
-        },
-    )
+    login_response = client.post("/auth/login", json={
+        "email_or_username": user_data["username"],
+        "password": user_data["password"]
+    })
     assert login_response.status_code == 200
     tokens = login_response.json()
-
+    
     return {"Authorization": f"Bearer {tokens['access_token']}"}
 
 
@@ -99,35 +95,31 @@ def test_system_data_location_endpoint(client, temp_data_dir):
     # This endpoint requires authentication, so we need to create a user and login first
     # Register a user with unique credentials
     import uuid
-
     unique_id = str(uuid.uuid4())[:8]
     user_data = {
         "username": f"testuser_sysinfo_{unique_id}",
-        "email": f"test_sysinfo_{unique_id}@example.com",
+        "email": f"test_sysinfo_{unique_id}@example.com", 
         "password": "testpass123",
-        "full_name": "Test User",
+        "full_name": "Test User"
     }
     register_response = client.post("/auth/register", json=user_data)
     assert register_response.status_code == 200
-
+    
     # Login to get token
-    login_response = client.post(
-        "/auth/login",
-        json={
-            "email_or_username": user_data["username"],
-            "password": user_data["password"],
-        },
-    )
+    login_response = client.post("/auth/login", json={
+        "email_or_username": user_data["username"],
+        "password": user_data["password"]
+    })
     assert login_response.status_code == 200
     tokens = login_response.json()
-
+    
     # Use token to access system endpoint
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     response = client.get("/system/data-location", headers=headers)
-
+    
     assert response.status_code == 200
     data = response.json()
-
+    
     # Check required fields for current database-based implementation
     assert "database_type" in data
     assert "data_storage" in data
