@@ -23,7 +23,7 @@ function EnhancedTaskManager({ onTasksChange }) {
       const response = await authenticatedFetch('/tasks')
       if (response.ok) {
         const data = await response.json()
-        setTasks(data.tasks || {})
+        setTasks(data.tasks || [])
       }
     } catch (error) {
       console.error('Error loading tasks:', error)
@@ -42,9 +42,32 @@ function EnhancedTaskManager({ onTasksChange }) {
     }
   }
 
+  // Validate task name for basic requirements only
+  const validateTaskName = (name) => {
+    if (!name || !name.trim()) {
+      return 'Task name cannot be empty'
+    }
+    
+    // Check for excessive spaces
+    if (name.includes('  ')) {
+      return 'Task name cannot contain multiple consecutive spaces.'
+    }
+    
+    if (name !== name.trim()) {
+      return 'Task name cannot start or end with spaces.'
+    }
+    
+    if (name.length > 100) {
+      return 'Task name must be 100 characters or less.'
+    }
+    
+    return null // Valid
+  }
+
   const createTask = async () => {
-    if (!taskName.trim()) {
-      setResult('Please enter a task name')
+    const validationError = validateTaskName(taskName)
+    if (validationError) {
+      setResult(validationError)
       return
     }
 
@@ -53,7 +76,7 @@ function EnhancedTaskManager({ onTasksChange }) {
       const response = await authenticatedFetch('/tasks', {
         method: 'POST',
         body: JSON.stringify({
-          name: taskName,
+          name: taskName.trim(),
           description: taskDescription,
           category: selectedCategory
         })
@@ -67,7 +90,8 @@ function EnhancedTaskManager({ onTasksChange }) {
         await loadTasks()
         if (onTasksChange) onTasksChange()
       } else {
-        setResult('Error creating task')
+        const errorData = await response.json()
+        setResult(errorData.detail || 'Error creating task')
       }
     } catch (error) {
       console.error('Error creating task:', error)
@@ -104,14 +128,13 @@ function EnhancedTaskManager({ onTasksChange }) {
 
 
 
-  const deleteTask = async (taskName) => {
+  const deleteTask = async (taskId, taskName) => {
     try {
       setLoading(true)
-      console.log('Deleting task:', taskName)
+      console.log('Deleting task:', taskName, 'ID:', taskId)
       
-      // URL encode the task name to handle special characters
-      const encodedTaskName = encodeURIComponent(taskName)
-      const response = await authenticatedFetch(`/tasks/${encodedTaskName}`, {
+      // Use task ID instead of encoded name
+      const response = await authenticatedFetch(`/tasks/${taskId}`, {
         method: 'DELETE'
       })
       
@@ -236,12 +259,31 @@ function EnhancedTaskManager({ onTasksChange }) {
       {/* Tasks List */}
       <div className="task-list">
         <h4>Current Tasks</h4>
-        {Object.keys(tasks).length === 0 ? (
+        {Array.isArray(tasks) && tasks.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📝</div>
             <div className="empty-state-text">No tasks yet. Create one above!</div>
           </div>
+        ) : Array.isArray(tasks) ? (
+          tasks.map((task) => (
+            <div key={task.id} className="task-item">
+              <span className="task-name">{task.name}</span>
+              <span className="task-time">{formatTime(task.time_spent)}</span>
+              <button 
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete the task "${task.name}"?`)) {
+                    deleteTask(task.id, task.name)
+                  }
+                }}
+                className="btn btn-danger btn-small"
+                disabled={loading}
+              >
+                🗑️
+              </button>
+            </div>
+          ))
         ) : (
+          // Fallback for old format
           Object.entries(tasks).map(([taskName, timeSpent]) => (
             <div key={taskName} className="task-item">
               <span className="task-name">{taskName}</span>

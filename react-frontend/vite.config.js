@@ -8,21 +8,21 @@ export default defineConfig({
     proxy: {
       // Proxy API requests to FastAPI backend
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       },
       // Direct proxy for specific endpoints  
-      '/auth': 'http://localhost:8000',
-      '/tasks': 'http://localhost:8000',
-      '/rates': 'http://localhost:8000',
-      '/currency': 'http://localhost:8000',
-      '/currencies': 'http://localhost:8000',
-      '/categories': 'http://localhost:8000',
-      '/invoice': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
-      '/version': 'http://localhost:8000',
-      '/system': 'http://localhost:8000'
+      '/auth': 'http://localhost:8001',
+      '/tasks': 'http://localhost:8001',
+      '/rates': 'http://localhost:8001',
+      '/currency': 'http://localhost:8001',
+      '/currencies': 'http://localhost:8001',
+      '/categories': 'http://localhost:8001',
+      '/invoice': 'http://localhost:8001',
+      '/health': 'http://localhost:8001',
+      '/version': 'http://localhost:8001',
+      '/system': 'http://localhost:8001'
     }
   }
 })

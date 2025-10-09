@@ -46,7 +46,7 @@ function AppContent() {
       const response = await authenticatedFetch('/tasks')
       if (response.ok) {
         const data = await response.json()
-        setTasks(data.tasks || {})
+        setTasks(data.tasks || [])
       } else {
         console.error('Failed to load tasks:', response.status)
       }
@@ -62,14 +62,13 @@ function AppContent() {
     }
   }, [isAuthenticated, loadTasks])
 
-  const handleSaveToTask = async (taskName, timeToSave) => {
+  const handleSaveToTask = async (taskId, timeToSave) => {
     try {
-      // Only add time entry - this will create the task if it doesn't exist
-      // and properly accumulate time if it does exist
-      const timeResponse = await authenticatedFetch(`/tasks/${taskName}/time`, {
+      // Use task ID for the new API endpoint format
+      const timeResponse = await authenticatedFetch(`/tasks/${taskId}/time`, {
         method: 'POST',
         body: JSON.stringify({
-          task_id: taskName,
+          task_id: parseInt(taskId),
           hours: timeToSave / (1000 * 60 * 60), // Convert ms to hours
           date: new Date().toISOString().split('T')[0],
           description: `Timer session: ${(timeToSave / (1000 * 60)).toFixed(1)} minutes`

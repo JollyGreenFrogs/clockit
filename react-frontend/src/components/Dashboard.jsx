@@ -4,7 +4,7 @@ import './Dashboard.css'
 
 function Dashboard() {
   const [dashboardData, setDashboardData] = useState({
-    tasks: {},
+    tasks: [],
     rates: {},
     currency: null,
     loading: true
@@ -22,7 +22,7 @@ function Dashboard() {
         authenticatedFetch('/currency').catch(() => ({ ok: false })) // Currency might not be set
       ])
 
-      const tasks = tasksResponse.ok ? (await tasksResponse.json()).tasks || {} : {}
+      const tasks = tasksResponse.ok ? (await tasksResponse.json()).tasks || [] : []
       const rates = ratesResponse.ok ? (await ratesResponse.json()) : {}
       const currency = currencyResponse.ok ? (await currencyResponse.json()).currency : null
 
@@ -45,6 +45,35 @@ function Dashboard() {
   const calculateStats = () => {
     const { tasks, rates } = dashboardData
     
+    // Handle new array format
+    if (Array.isArray(tasks)) {
+      const totalTasks = tasks.length
+      const totalHours = tasks.reduce((sum, task) => sum + (task.time_spent || 0), 0)
+      
+      // Calculate estimated income
+      let totalIncome = 0
+      tasks.forEach(task => {
+        // Try to find a matching rate for this task
+        const taskRate = Object.entries(rates).find(([rateType]) => 
+          task.name.toLowerCase().includes(rateType.toLowerCase()) || 
+          rateType.toLowerCase().includes(task.name.toLowerCase())
+        )
+        
+        if (taskRate) {
+          const hourlyRate = taskRate[1] / 8 // Convert day rate to hourly
+          totalIncome += (task.time_spent || 0) * hourlyRate
+        }
+      })
+      
+      return {
+        totalTasks,
+        totalHours,
+        totalIncome,
+        averageHoursPerTask: totalTasks > 0 ? totalHours / totalTasks : 0
+      }
+    }
+    
+    // Handle old object format for backward compatibility
     const totalTasks = Object.keys(tasks).length
     const totalHours = Object.values(tasks).reduce((sum, hours) => sum + hours, 0)
     
@@ -97,6 +126,16 @@ function Dashboard() {
 
   const getRecentTasks = () => {
     const { tasks } = dashboardData
+    
+    // Handle new array format
+    if (Array.isArray(tasks)) {
+      return tasks
+        .sort((a, b) => b.time_spent - a.time_spent) // Sort by time spent (descending)
+        .slice(0, 5) // Top 5 tasks
+        .map(task => [task.name, task.time_spent]) // Convert to [name, time] format for compatibility
+    }
+    
+    // Handle old object format for backward compatibility
     return Object.entries(tasks)
       .sort(([,a], [,b]) => b - a) // Sort by time spent (descending)
       .slice(0, 5) // Top 5 tasks
