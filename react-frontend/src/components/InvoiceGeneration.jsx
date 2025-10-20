@@ -13,9 +13,13 @@ function InvoiceGeneration() {
       const response = await authenticatedFetch('/invoice/preview')
       const data = await response.json()
       
+      console.log('Preview response:', response.status, data) // Debug log
+      
       if (response.ok) {
-        setPreview(data.preview || 'No invoice data available')
-        setResult('Invoice preview generated')
+        const previewText = data.preview || 'No invoice data available'
+        console.log('Setting preview to:', previewText) // Debug log
+        setPreview(previewText)
+        setResult('Invoice preview generated successfully!')
       } else {
         setResult('Error generating preview: ' + (data.detail || 'Unknown error'))
       }
@@ -30,7 +34,7 @@ function InvoiceGeneration() {
   const generateInvoice = async () => {
     setLoading(true)
     try {
-      const response = await authenticatedFetch('/invoice', {
+      const response = await authenticatedFetch('/invoice/generate', {
         method: 'POST'
       })
 

@@ -1,16 +1,68 @@
-# React + Vite
+# ClockIt Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the ClockIt time tracking application.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ⚡️ **Fast Development**: Vite with Hot Module Replacement (HMR)
+- 🧪 **Comprehensive Testing**: Vitest + Playwright for component and E2E testing
+- 🔒 **Authentication**: JWT-based authentication with context management
+- 📱 **Responsive Design**: Mobile-friendly time tracking interface
+- 🎯 **Task Management**: Create, track, and manage time entries
+- 💰 **Rate Configuration**: Flexible hourly rate management
+- 📊 **Invoice Generation**: Export time tracking data
 
-## React Compiler
+## Quick Start
 
-The React Compiler is not enabled on this template. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
+# Start development server
+npm run dev
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Build for production
+npm run build
+```
+
+## Testing
+
+This project includes comprehensive testing with both component and end-to-end tests.
+
+### Component Tests (Vitest)
+```bash
+npm run test          # Watch mode
+npm run test:run      # Single run
+npm run test:coverage # With coverage
+```
+
+### E2E Tests (Playwright)
+```bash
+npm run test:e2e      # Run E2E tests
+npm run test:e2e:ui   # With UI
+```
+
+📖 **See [TESTING.md](./TESTING.md) for detailed testing guide**
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run test` - Run component tests
+- `npm run test:e2e` - Run E2E tests
+
+### WSL Compatibility
+
+All tests are configured for headless operation, making them fully compatible with WSL environments.
+
+## Tech Stack
+
+- **React 19** - UI library with latest features
+- **Vite** - Fast build tool and dev server
+- **Vitest** - Fast unit testing framework
+- **Playwright** - Reliable E2E testing
+- **Testing Library** - Simple component testing utilities

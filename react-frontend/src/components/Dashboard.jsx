@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import TaskAuditModal from './TaskAuditModal'
 import './Dashboard.css'
 
 function Dashboard() {
@@ -9,6 +10,8 @@ function Dashboard() {
     currency: null,
     loading: true
   })
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false)
   const { authenticatedFetch } = useAuth()
 
   const loadDashboardData = useCallback(async () => {
@@ -22,7 +25,16 @@ function Dashboard() {
         authenticatedFetch('/currency').catch(() => ({ ok: false })) // Currency might not be set
       ])
 
-      const tasks = tasksResponse.ok ? (await tasksResponse.json()).tasks || [] : []
+      // Process tasks data - convert object to array
+      let tasks = []
+      if (tasksResponse.ok) {
+        const tasksData = await tasksResponse.json()
+        if (tasksData.tasks) {
+          // Convert object format {"1": {...}, "2": {...}} to array [...] 
+          tasks = Object.values(tasksData.tasks)
+        }
+      }
+
       const rates = ratesResponse.ok ? (await ratesResponse.json()) : {}
       const currency = currencyResponse.ok ? (await currencyResponse.json()).currency : null
 
@@ -45,53 +57,25 @@ function Dashboard() {
   const calculateStats = () => {
     const { tasks, rates } = dashboardData
     
-    // Handle new array format
-    if (Array.isArray(tasks)) {
-      const totalTasks = tasks.length
-      const totalHours = tasks.reduce((sum, task) => sum + (task.time_spent || 0), 0)
-      
-      // Calculate estimated income
-      let totalIncome = 0
-      tasks.forEach(task => {
-        // Try to find a matching rate for this task
-        const taskRate = Object.entries(rates).find(([rateType]) => 
-          task.name.toLowerCase().includes(rateType.toLowerCase()) || 
-          rateType.toLowerCase().includes(task.name.toLowerCase())
-        )
-        
-        if (taskRate) {
-          const hourlyRate = taskRate[1] / 8 // Convert day rate to hourly
-          totalIncome += (task.time_spent || 0) * hourlyRate
-        }
-      })
-      
-      return {
-        totalTasks,
-        totalHours,
-        totalIncome,
-        averageHoursPerTask: totalTasks > 0 ? totalHours / totalTasks : 0
-      }
-    }
-    
-    // Handle old object format for backward compatibility
-    const totalTasks = Object.keys(tasks).length
-    const totalHours = Object.values(tasks).reduce((sum, hours) => sum + hours, 0)
+    // Tasks are now always an array
+    const totalTasks = tasks.length
+    const totalHours = tasks.reduce((sum, task) => sum + (task.time_spent || 0), 0)
     
     // Calculate estimated income
     let totalIncome = 0
-    Object.entries(tasks).forEach(([taskName, hours]) => {
+    tasks.forEach(task => {
       // Try to find a matching rate for this task
       const taskRate = Object.entries(rates).find(([rateType]) => 
-        taskName.toLowerCase().includes(rateType.toLowerCase()) || 
-        rateType.toLowerCase().includes(taskName.toLowerCase())
+        task.name.toLowerCase().includes(rateType.toLowerCase()) || 
+        rateType.toLowerCase().includes(task.name.toLowerCase())
       )
       
       if (taskRate) {
         const hourlyRate = taskRate[1] / 8 // Convert day rate to hourly
-        totalIncome += hours * hourlyRate
+        totalIncome += (task.time_spent || 0) * hourlyRate
       }
     })
-
+    
     return {
       totalTasks,
       totalHours,
@@ -101,6 +85,11 @@ function Dashboard() {
   }
 
   const formatTime = (hours) => {
+    // Handle invalid input
+    if (typeof hours !== 'number' || isNaN(hours) || hours < 0) {
+      return '00:00:00'
+    }
+    
     const totalHours = Math.floor(hours)
     const minutes = Math.floor((hours % 1) * 60)
     const seconds = Math.floor(((hours % 1) * 60 % 1) * 60)
@@ -127,18 +116,31 @@ function Dashboard() {
   const getRecentTasks = () => {
     const { tasks } = dashboardData
     
-    // Handle new array format
-    if (Array.isArray(tasks)) {
-      return tasks
-        .sort((a, b) => b.time_spent - a.time_spent) // Sort by time spent (descending)
-        .slice(0, 5) // Top 5 tasks
-        .map(task => [task.name, task.time_spent]) // Convert to [name, time] format for compatibility
-    }
-    
-    // Handle old object format for backward compatibility
-    return Object.entries(tasks)
-      .sort(([,a], [,b]) => b - a) // Sort by time spent (descending)
+    // Tasks are now always an array
+    return tasks
+      .filter(task => task.time_spent > 0) // Only show tasks with actual time
+      .sort((a, b) => b.time_spent - a.time_spent) // Sort by time spent (descending)
       .slice(0, 5) // Top 5 tasks
+  }
+
+  const openTaskAudit = (task) => {
+    setSelectedTask(task)
+    setIsAuditModalOpen(true)
+  }
+
+  const closeTaskAudit = () => {
+    setIsAuditModalOpen(false)
+    setSelectedTask(null)
+  }
+
+  const handleTaskUpdate = (updatedTask) => {
+    // Update the task in the dashboard data
+    setDashboardData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(task => 
+        task.id === updatedTask.id ? updatedTask : task
+      )
+    }))
   }
 
   if (dashboardData.loading) {
@@ -208,10 +210,23 @@ function Dashboard() {
         </h3>
         {recentTasks.length > 0 ? (
           <div className="recent-tasks">
-            {recentTasks.map(([taskName, timeSpent]) => (
-              <div key={taskName} className="task-summary">
-                <div className="task-summary-name">{taskName}</div>
-                <div className="task-summary-time">{formatTime(timeSpent)}</div>
+            {recentTasks.map((task) => (
+              <div 
+                key={task.id} 
+                className="task-summary clickable"
+                onClick={() => openTaskAudit(task)}
+                title="Click to view task audit trail"
+              >
+                <div className="task-summary-main">
+                  <div className="task-summary-name">{task.name}</div>
+                  {task.category && (
+                    <div className="task-summary-category">📁 {task.category}</div>
+                  )}
+                  {task.description && (
+                    <div className="task-summary-description">{task.description}</div>
+                  )}
+                </div>
+                <div className="task-summary-time">{formatTime(task.time_spent)}</div>
               </div>
             ))}
           </div>
@@ -288,6 +303,14 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Task Audit Modal */}
+      <TaskAuditModal
+        task={selectedTask}
+        isOpen={isAuditModalOpen}
+        onClose={closeTaskAudit}
+        onTaskUpdate={handleTaskUpdate}
+      />
     </div>
   )
 }

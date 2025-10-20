@@ -30,6 +30,10 @@ class User(Base):
     subscription_tier = Column(String(50), default="free")  # free, pro, enterprise
     subscription_expires = Column(DateTime, nullable=True)
 
+    # Onboarding
+    onboarding_completed = Column(Boolean, default=False)
+    default_category = Column(String(100), nullable=True)  # User's default category for tasks
+
     # Security & tracking
     last_login = Column(DateTime, nullable=True)
     failed_login_attempts = Column(Integer, default=0)

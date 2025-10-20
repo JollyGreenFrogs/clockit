@@ -213,6 +213,44 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
+  const refreshUser = async () => {
+    if (!token) return false;
+    
+    try {
+      const response = await fetch(`${API_BASE}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      return false;
+    }
+  };
+
+  const checkOnboardingStatus = async () => {
+    if (!token) return null;
+    
+    try {
+      const response = await authenticatedFetch('/onboarding/status');
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      return null;
+    }
+  };
+
   const value = {
     user,
     token,
@@ -222,6 +260,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     refreshToken,
     authenticatedFetch,
+    refreshUser,
+    checkOnboardingStatus,
     isAuthenticated: !!token && !!user,
   };
 

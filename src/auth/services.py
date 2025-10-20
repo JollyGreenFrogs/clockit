@@ -309,6 +309,23 @@ class AuthService:
         self.db.add(log)
         # Don't commit here - let the caller handle it
 
+    def complete_user_onboarding(self, user_id: str, default_category: str) -> bool:
+        """Complete user onboarding by setting default category and onboarding status"""
+        try:
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+            
+            user.onboarding_completed = True
+            user.default_category = default_category
+            user.updated_at = datetime.utcnow()
+            
+            self.db.commit()
+            return True
+        except Exception:
+            self.db.rollback()
+            return False
+
 
 class EncryptionService:
     """Handle data encryption at rest"""

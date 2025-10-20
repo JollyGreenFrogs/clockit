@@ -54,8 +54,10 @@ class TaskManager:
         """Load tasks from database for specific user with full details"""
         try:
             task_repo, _, _ = self._get_repositories()
-            tasks = task_repo.get_all_tasks_detailed(user_id=user_id)
-            return {"tasks": tasks}
+            tasks_list = task_repo.get_all_tasks_detailed(user_id=user_id)
+            # Convert list to dictionary with task IDs as keys (expected by invoice manager)
+            tasks_dict = {str(task["id"]): task for task in tasks_list}
+            return {"tasks": tasks_dict}
         except Exception as e:
             self.logger.exception("Error loading tasks for user %s: %s", user_id, e)
             return {"tasks": {}}
@@ -206,6 +208,7 @@ class TaskManager:
             # Then add detailed time entry
             if success:
                 time_repo.add_time_entry(
+                    task_id=task_id,
                     task_name=task["name"],
                     duration=duration,
                     description=description,
@@ -230,12 +233,15 @@ class TaskManager:
             self.logger.exception("Error deleting task for user %s: %s", user_id, e)
             return False
 
-    def get_task_categories(self) -> List[str]:
-        """Get all available categories"""
+    def get_task_categories(self, user_id: Optional[str] = None) -> List[Dict]:
+        """Get all available categories for a user"""
         try:
             _, cat_repo, _ = self._get_repositories()
-            categories = cat_repo.get_all_categories()
-            return [cat["name"] for cat in categories]
+            if user_id:
+                categories = cat_repo.get_all_categories(user_id)
+            else:
+                categories = cat_repo.get_all_categories()
+            return categories
         except Exception as e:
             self.logger.exception("Error getting categories: %s", e)
             return []
@@ -259,3 +265,42 @@ class TaskManager:
         except Exception as e:
             self.logger.exception("Error getting task details: %s", e)
             return []
+
+    def get_task_time_entries(self, task_id: int, user_id: str) -> List:
+        """Get all time entries for a specific task"""
+        try:
+            _, _, time_repo = self._get_repositories()
+            return time_repo.get_time_entries_for_task(task_id, user_id)
+        except Exception as e:
+            self.logger.exception("Error getting time entries for task: %s", e)
+            return []
+
+    def delete_time_entry(self, entry_id: int, user_id: str) -> bool:
+        """Delete a specific time entry"""
+        try:
+            _, _, time_repo = self._get_repositories()
+            return time_repo.delete_time_entry(entry_id, user_id)
+        except Exception as e:
+            self.logger.exception("Error deleting time entry: %s", e)
+            return False
+
+    def update_time_entry(
+        self, entry_id: int, user_id: str, duration: Optional[float] = None,
+        description: Optional[str] = None
+    ) -> bool:
+        """Update a specific time entry"""
+        try:
+            _, _, time_repo = self._get_repositories()
+            return time_repo.update_time_entry(entry_id, user_id, duration, description)
+        except Exception as e:
+            self.logger.exception("Error updating time entry: %s", e)
+            return False
+
+    def update_task_category(self, task_id: int, user_id: str, category: str) -> bool:
+        """Update the category of a specific task"""
+        try:
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.update_task_category(task_id, user_id, category)
+        except Exception as e:
+            self.logger.exception("Error updating task category: %s", e)
+            return False

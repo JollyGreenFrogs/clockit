@@ -107,6 +107,22 @@ class ConfigResponse(BaseModel):
     updated_at: datetime
 
 
+# Onboarding schemas
+class OnboardingData(BaseModel):
+    """Schema for onboarding completion data"""
+    
+    default_category: str = Field(..., min_length=1, max_length=100)
+    categories: list[str] = Field(..., description="List of categories to create")
+
+
+class OnboardingStatus(BaseModel):
+    """Schema for onboarding status response"""
+    
+    onboarding_completed: bool
+    default_category: Optional[str] = None
+    needs_onboarding: bool
+
+
 # API response schemas
 class SuccessResponse(BaseModel):
     """Schema for success responses"""

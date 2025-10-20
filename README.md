@@ -1,6 +1,8 @@
 # ClockIt - Professional Time Tracker
 
-A modern, cloud-ready time tracking application built with FastAPI. Track time spent on projects and generate invoices.
+[![CI](https://github.com/JollyGreenFrogs/clockit/actions/workflows/ci.yml/badge.svg)](https://github.com/JollyGreenFrogs/clockit/actions/workflows/ci.yml)
+
+A modern, cloud-ready time tracking application built with FastAPI and React. Track time spent on projects and generate invoices.
 
 ## ✨ Features
 
@@ -105,8 +107,9 @@ SECRET_KEY=your-secret-key
 
 ## 🧪 Testing
 
+### Backend Tests (Python)
 ```bash
-# Run tests
+# Run all backend tests
 pytest
 
 # Run specific test file
@@ -115,6 +118,28 @@ pytest tests/test_config.py
 # Run with coverage
 pytest --cov=src tests/
 ```
+
+### Frontend Tests (React)
+```bash
+cd react-frontend
+
+# Component tests (Vitest)
+npm run test              # Watch mode
+npm run test:run          # Single run
+
+# E2E tests (Playwright)
+npm run test:e2e          # Full browser testing
+
+# All frontend tests
+npm run test:run && npm run test:e2e
+```
+
+### CI/CD Pipeline
+- ✅ **Backend testing**: pytest with Python 3.12
+- ✅ **Frontend testing**: Vitest + Playwright E2E
+- ✅ **Code quality**: black, isort, flake8, ESLint
+- ✅ **Multi-browser testing**: Chromium, Firefox, WebKit
+- ✅ **WSL compatible**: All tests run in headless mode
 
 ## 🏗️ Cloud Deployment
 
