@@ -14,6 +14,19 @@ A modern, cloud-ready time tracking application built with FastAPI and React. Tr
 - 🛡️ **Production Ready**: Health checks, structured logging, and security best practices
 - 💾 **Flexible Storage**: File-based (development) or PostgreSQL (production)
 
+## 🛡️ Security Notice
+
+**Important:** A comprehensive security audit has been completed. Before deploying to production, please review:
+
+- 📋 [Security Audit README](SECURITY_AUDIT_README.md) - Start here
+- 🚀 [Quick Start Security Guide](SECURITY_QUICK_START.md) - Fix critical issues in 1 hour
+- 👔 [Executive Summary](SECURITY_EXECUTIVE_SUMMARY.md) - For stakeholders
+
+**Current Security Score:** 5.6/10 (MODERATE RISK)  
+**Status:** Not production-ready without critical fixes
+
+See [SECURITY_AUDIT_SUMMARY.txt](SECURITY_AUDIT_SUMMARY.txt) for a quick overview.
+
 ## 🚀 Quick Start
 
 ### Local Development
