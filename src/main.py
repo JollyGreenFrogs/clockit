@@ -1,26 +1,18 @@
-import json
 import os
-import re
-import signal
-import threading
-import urllib.parse
-import webbrowser
-from datetime import date, datetime
-from pathlib import Path
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, validator
 
 # Handle imports that work from both project root and src directory
 try:
-    from .auth.dependencies import get_current_user, get_optional_user
+    from .auth.dependencies import get_current_user
     from .auth.routes import router as auth_router
     from .business.currency_manager import CurrencyManager
     from .business.invoice_manager import InvoiceManager
-    from .business.rate_manager import RateManager
     from .business.task_manager import TaskManager
     from .config import Config
     from .database.auth_models import User
@@ -38,11 +30,10 @@ except ImportError:
     from database.connection import get_db
     from database.repositories import ConfigRepository, CurrencyRepository
     from business.task_manager import TaskManager
-    from business.rate_manager import RateManager
     from business.currency_manager import CurrencyManager
     from business.invoice_manager import InvoiceManager
     from auth.routes import router as auth_router
-    from auth.dependencies import get_current_user, get_optional_user
+    from auth.dependencies import get_current_user
     from database.auth_models import User
 
 import logging
@@ -111,24 +102,6 @@ class TaskCreate(BaseModel):
     name: str
     description: Optional[str] = ""
     parent_heading: Optional[str] = ""
-    
-    @validator('name')
-    def validate_task_name(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Task name cannot be empty')
-        
-        # Check for excessive spaces
-        if '  ' in v:  # Multiple consecutive spaces
-            raise ValueError('Task name cannot contain multiple consecutive spaces.')
-        
-        if v != v.strip():
-            raise ValueError('Task name cannot start or end with spaces.')
-        
-        # Ensure reasonable length
-        if len(v) > 100:
-            raise ValueError('Task name must be 100 characters or less.')
-        
-        return v.strip()
 
     @validator("name")
     def validate_task_name(cls, v):
@@ -593,28 +566,26 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
         preview_lines = []
         preview_lines.append("=== INVOICE PREVIEW ===")
         preview_lines.append("")
-        
+
         if "items" in result:
             preview_lines.append("ITEMS:")
             for item in result["items"]:
-                preview_lines.append(f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}")
-            
+                preview_lines.append(
+                    f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}"
+                )
+
             preview_lines.append("")
-            preview_lines.append(f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}")
+            preview_lines.append(
+                f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}"
+            )
             preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
-        
+
         preview_text = "\n".join(preview_lines)
-        
-        return {
-            "preview": preview_text,
-            "status": "success"
-        }
+
+        return {"preview": preview_text, "status": "success"}
     except Exception as e:
         logger.exception("Error generating invoice preview: %s", e)
-        return {
-            "preview": f"Error generating preview: {str(e)}",
-            "status": "error"
-        }
+        return {"preview": f"Error generating preview: {str(e)}", "status": "error"}
 
 
 # System Control Endpoints
@@ -634,7 +605,7 @@ async def health_check():
             # Simple test to see if we can instantiate task manager
             from business.task_manager import TaskManager
 
-            tm = TaskManager()
+            TaskManager()  # Just test instantiation
             tasks_loadable = True
         except Exception as e:
             logger.warning(f"Task system check failed: {e}")

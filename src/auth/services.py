@@ -11,7 +11,7 @@ import jwt
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from database.auth_models import AuditLog, User, UserSession
+from database.auth_models import AuditLog, User
 from database.models import Category
 
 

@@ -5,7 +5,6 @@ Task management business logic
 import logging
 import os
 import sys
-from datetime import datetime
 from typing import Dict, List, Optional
 
 # Add parent directory to path for imports
@@ -21,10 +20,10 @@ from database.repositories import (
 
 class TaskManager:
     """Handles all task-related business operations"""
-    
+
     def __init__(self, data_dir=None):
         """Initialize TaskManager
-        
+
         Args:
             data_dir: Legacy parameter for backwards compatibility, ignored in database version
         """
@@ -32,7 +31,8 @@ class TaskManager:
         if data_dir is not None:
             # For backwards compatibility, just log a warning
             self.logger.warning(
-                "data_dir parameter is deprecated and ignored in database-backed TaskManager"
+                "data_dir parameter is deprecated and ignored in "
+                "database-backed TaskManager"
             )
 
     def _get_repositories(self):

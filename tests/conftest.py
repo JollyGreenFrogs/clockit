@@ -49,9 +49,7 @@ def test_engine(test_database_url):
     if "sqlite" in test_database_url:
         # SQLite configuration
         engine = create_engine(
-            test_database_url, 
-            echo=False,
-            connect_args={"check_same_thread": False}
+            test_database_url, echo=False, connect_args={"check_same_thread": False}
         )
     else:
         # PostgreSQL configuration
