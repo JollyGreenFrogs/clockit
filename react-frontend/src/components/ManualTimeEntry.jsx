@@ -16,6 +16,7 @@ function ManualTimeEntry({ tasks, onTimeAdded }) {
     }
 
     try {
+      // selectedTask is now the task ID
       const response = await authenticatedFetch(`/tasks/${selectedTask}/time`, {
         method: 'POST',
         body: JSON.stringify({
@@ -33,6 +34,10 @@ function ManualTimeEntry({ tasks, onTimeAdded }) {
         setResult('Time entry added successfully!')
         // Clear result after 3 seconds
         setTimeout(() => setResult(''), 3000)
+      } else {
+        const errorData = await response.json()
+        setResult(errorData.detail || 'Error adding time entry')
+        setTimeout(() => setResult(''), 5000)
       }
     } catch (error) {
       console.error('Error adding time entry:', error)
@@ -52,7 +57,9 @@ function ManualTimeEntry({ tasks, onTimeAdded }) {
             onChange={(e) => setSelectedTask(e.target.value)}
           >
             <option value="">Select a task...</option>
-            {Object.keys(tasks).map(taskName => (
+            {Array.isArray(tasks) ? tasks.map(task => (
+              <option key={task.id} value={task.id}>{task.name}</option>
+            )) : Object.keys(tasks).map(taskName => (
               <option key={taskName} value={taskName}>{taskName}</option>
             ))}
           </select>

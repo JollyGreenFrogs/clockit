@@ -1,0 +1,18 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503, E712, E402, E501
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    build,
+    dist,
+    *.egg-info
+per-file-ignores =
+    src/database/repositories.py:E712
+    src/auth/dependencies.py:E402
+    src/auth/routes.py:E402
+    src/business/*.py:E402
+    tests/conftest.py:E402

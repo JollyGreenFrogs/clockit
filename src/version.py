@@ -11,16 +11,19 @@ VERSION_INFO = {
     "version": __version__,
     "build_date": __build_date__,
     "author": __author__,
-    "description": "Professional Time Tracking & Invoice Generation"
+    "description": "Professional Time Tracking & Invoice Generation",
 }
+
 
 def get_version():
     """Get the current version string"""
     return __version__
 
+
 def get_full_version_info():
     """Get complete version information"""
     return VERSION_INFO
+
 
 def get_version_string():
     """Get formatted version string for display"""
