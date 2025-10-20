@@ -3,8 +3,9 @@ Authentication services for user management, JWT tokens, and security
 """
 
 import os
+import re
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import bcrypt
 import jwt
@@ -15,14 +16,63 @@ from database.auth_models import AuditLog, User
 from database.models import Category
 
 
+def validate_password_strength(password: str) -> Tuple[bool, str]:
+    """
+    Validate password meets security requirements
+    Returns: (is_valid, error_message)
+    """
+    if len(password) < 12:
+        return False, "Password must be at least 12 characters long"
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]', password):
+        return False, "Password must contain at least one special character"
+    
+    # Check for common patterns
+    common_patterns = [
+        r'(.)\1{2,}',  # Repeated characters (aaa, 111)
+        r'(012|123|234|345|456|567|678|789|890)',  # Sequential numbers
+    ]
+    
+    for pattern in common_patterns:
+        if re.search(pattern, password.lower()):
+            return False, "Password contains common patterns and is too predictable"
+    
+    # Check against common passwords
+    common_passwords = [
+        'password', 'password123', 'admin', 'admin123', 
+        'qwerty', '123456', '12345678', 'password1', 'password1!',
+        'welcome', 'welcome123', 'letmein'
+    ]
+    if password.lower() in common_passwords:
+        return False, "Password is too common. Please choose a stronger password"
+    
+    return True, ""
+
+
 class AuthService:
     """Handles all authentication-related operations"""
 
     def __init__(self, db: Session):
         self.db = db
-        self.secret_key = os.getenv(
-            "SECRET_KEY", "your-secret-key-change-in-production"
-        )
+        self.secret_key = os.getenv("SECRET_KEY")
+        if not self.secret_key:
+            raise RuntimeError(
+                "SECRET_KEY environment variable must be set. "
+                "Generate one using: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+            )
+        if len(self.secret_key) < 32:
+            raise RuntimeError(
+                "SECRET_KEY must be at least 32 characters long for security"
+            )
         self.algorithm = "HS256"
         self.access_token_expire_minutes = 15
         self.refresh_token_expire_days = 7
@@ -49,10 +99,11 @@ class AuthService:
             )
 
         # Validate password strength
-        if len(password) < 6:
+        is_valid, error_message = validate_password_strength(password)
+        if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password must be at least 6 characters long",
+                detail=error_message
             )
 
         # Hash password with bcrypt
