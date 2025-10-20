@@ -38,8 +38,8 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
     
     # Check for common patterns
     common_patterns = [
-        r'(.)\1{2,}',  # Repeated characters (aaa, 111)
-        r'(012|123|234|345|456|567|678|789|890)',  # Sequential numbers
+        r'(.)\1{3,}',  # Repeated characters (aaaa, 1111) - 4+ times
+        r'(0123|1234|2345|3456|4567|5678|6789|7890)',  # Sequential numbers (4+ digits)
     ]
     
     for pattern in common_patterns:

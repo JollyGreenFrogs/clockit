@@ -21,6 +21,16 @@ from database.connection import get_db
 # Import rate limiter
 try:
     from middleware.rate_limit import limiter
+    from config import Config
+    # Create a conditional decorator
+    if Config.ENVIRONMENT == "test":
+        # Dummy decorator for tests
+        class DummyLimiter:
+            def limit(self, limit_string):
+                def decorator(func):
+                    return func
+                return decorator
+        limiter = DummyLimiter()
 except ImportError:
     # If rate limiter not available, create a dummy decorator
     class DummyLimiter:

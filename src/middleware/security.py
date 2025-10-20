@@ -54,9 +54,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "geolocation=(), microphone=(), camera=(), payment=()"
         )
         
-        # Remove sensitive server headers
-        response.headers.pop("Server", None)
-        response.headers.pop("X-Powered-By", None)
+        # Remove sensitive server headers (if they exist)
+        if "Server" in response.headers:
+            del response.headers["Server"]
+        if "X-Powered-By" in response.headers:
+            del response.headers["X-Powered-By"]
         
         return response
 

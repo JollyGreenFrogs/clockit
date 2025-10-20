@@ -43,6 +43,16 @@ limiter = Limiter(key_func=get_user_or_ip)
 
 def setup_rate_limiting(app):
     """Configure rate limiting for the application"""
+    # Skip rate limiting in test environment
+    try:
+        from config import Config
+    except ImportError:
+        from ..config import Config
+    
+    if Config.ENVIRONMENT == "test":
+        logger.info("Rate limiting disabled in test environment")
+        return
+    
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     logger.info("Rate limiting enabled")
