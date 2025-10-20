@@ -616,19 +616,6 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
             "status": "error"
         }
 
-            preview_lines.append("")
-            preview_lines.append(
-                f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}"
-            )
-            preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
-
-        preview_text = "\n".join(preview_lines)
-
-        return {"preview": preview_text, "status": "success"}
-    except Exception as e:
-        logger.exception("Error generating invoice preview: %s", e)
-        return {"preview": f"Error generating preview: {str(e)}", "status": "error"}
-
 
 # System Control Endpoints
 @app.get("/health")
