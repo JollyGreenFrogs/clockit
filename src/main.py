@@ -162,10 +162,14 @@ app = FastAPI(
 # Setup security middleware (HTTPS redirect and security headers)
 try:
     from .middleware.security import setup_security_middleware
+    from .middleware.rate_limit import setup_rate_limiting, limiter
     setup_security_middleware(app)
+    setup_rate_limiting(app)
 except ImportError:
     from middleware.security import setup_security_middleware
+    from middleware.rate_limit import setup_rate_limiting, limiter
     setup_security_middleware(app)
+    setup_rate_limiting(app)
 
 # Configure CORS based on environment
 if Config.ENVIRONMENT == "production":

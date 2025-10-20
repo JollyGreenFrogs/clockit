@@ -18,6 +18,18 @@ from auth.services import AuthService
 from database.auth_models import User
 from database.connection import get_db
 
+# Import rate limiter
+try:
+    from middleware.rate_limit import limiter
+except ImportError:
+    # If rate limiter not available, create a dummy decorator
+    class DummyLimiter:
+        def limit(self, limit_string):
+            def decorator(func):
+                return func
+            return decorator
+    limiter = DummyLimiter()
+
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
@@ -59,6 +71,7 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/register", response_model=UserResponse)
+@limiter.limit("3/hour")  # Limit registrations to prevent abuse
 async def register(
     user_data: UserRegister, request: Request, db: Session = Depends(get_db)
 ):
@@ -90,6 +103,7 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")  # Prevent brute force attacks
 async def login(
     login_data: LoginRequest, request: Request, db: Session = Depends(get_db)
 ):
@@ -133,7 +147,8 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(refresh_request: RefreshRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Allow reasonable token refresh rate
+async def refresh_token(refresh_request: RefreshRequest, request: Request, db: Session = Depends(get_db)):
     """Refresh access token using refresh token"""
     auth_service = AuthService(db)
 
