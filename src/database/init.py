@@ -3,13 +3,12 @@ Database initialization and migration utilities
 """
 
 import logging
-import os
 
 from sqlalchemy import text
+from sqlalchemy.orm import sessionmaker
 
-from .auth_models import AuditLog, User, UserSession  # Import auth models
 from .connection import DATABASE_URL, create_tables, engine
-from .models import Base
+from .repositories import CurrencyRepository
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +33,6 @@ def init_database():
 
 def _add_default_data():
     """Add default configuration and sample data - Skip for multi-tenant setup"""
-    from sqlalchemy.orm import sessionmaker
-
-    from .repositories import CurrencyRepository
-
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
 
@@ -58,8 +53,6 @@ def _add_default_data():
 
 def _initialize_currencies(db):
     """Initialize currencies table with common currencies"""
-    from .repositories import CurrencyRepository
-
     currency_repo = CurrencyRepository(db)
 
     # Common currencies - EUR and GBP first, then alphabetical

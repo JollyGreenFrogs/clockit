@@ -1,8 +1,4 @@
-from pathlib import Path
-
 import pytest
-
-from src.business.task_manager import TaskManager
 
 
 def test_create_task_and_add_time_entry(tmp_path):

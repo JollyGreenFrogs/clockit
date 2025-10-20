@@ -4,10 +4,7 @@ Simple test configuration using SQLite for basic testing
 
 import os
 import sys
-import tempfile
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,7 +15,6 @@ from sqlalchemy.orm import sessionmaker
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from config import Config
 from database.connection import get_db
 from main import app
 

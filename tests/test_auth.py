@@ -2,7 +2,6 @@
 Test authentication functionality
 """
 
-import pytest
 from fastapi import status
 
 

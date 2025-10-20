@@ -3,11 +3,8 @@ Test configuration management with new database architecture
 """
 
 import os
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from config import Config
 

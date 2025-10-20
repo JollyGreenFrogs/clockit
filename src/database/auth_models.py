@@ -3,7 +3,7 @@ User authentication and authorization models
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import bcrypt
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text

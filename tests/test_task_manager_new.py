@@ -3,7 +3,7 @@ Test TaskManager business logic with new database architecture
 """
 
 import uuid
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 

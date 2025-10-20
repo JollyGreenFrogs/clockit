@@ -2,7 +2,6 @@
 Test API endpoints with authentication and new database architecture
 """
 
-import pytest
 from fastapi import status
 
 

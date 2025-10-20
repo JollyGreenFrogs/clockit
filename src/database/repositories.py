@@ -2,9 +2,8 @@
 Database repositories for data access layer
 """
 
-import json
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session

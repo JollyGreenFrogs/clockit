@@ -43,7 +43,6 @@ def test_database_url():
 @pytest.fixture(scope="session")
 def test_engine(test_database_url):
     """Create a test database engine"""
-    from sqlalchemy import text
 
     # Configure engine based on database type
     if "sqlite" in test_database_url:

@@ -5,7 +5,7 @@ Currency management business logic
 import logging
 import os
 import sys
-from typing import Dict, Optional
+from typing import Dict
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

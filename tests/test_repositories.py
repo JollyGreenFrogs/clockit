@@ -5,10 +5,8 @@ Test database repositories functionality with new architecture
 import uuid
 
 import pytest
-from sqlalchemy.exc import IntegrityError
 
 from database.auth_models import User
-from database.models import Category, Task, TimeEntry, UserConfig
 from database.repositories import (
     CategoryRepository,
     ConfigRepository,

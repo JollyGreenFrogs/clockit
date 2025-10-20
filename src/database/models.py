@@ -2,7 +2,6 @@
 Database models for clockit application
 """
 
-import uuid
 from datetime import datetime
 
 from sqlalchemy import (
@@ -15,9 +14,6 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
-
-from .auth_models import User  # Import User model
 from .connection import Base
 from .types import JSON, UUID
 
