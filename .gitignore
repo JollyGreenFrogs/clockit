@@ -58,6 +58,9 @@ Thumbs.db
 clockit_data/
 data/
 
+# Exception: Allow password security data
+!src/auth/data/
+
 # Application configuration and data files
 *.json
 
