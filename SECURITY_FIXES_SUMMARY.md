@@ -60,15 +60,27 @@ This document summarizes the security fixes implemented to address the cyber and
 - Added checks for common patterns:
   - Sequential numbers (4+ digits: 1234, 5678)
   - Repeated characters (4+ times: aaaa, 1111)
-- Blocked common weak passwords (password, admin, 123456, etc.)
+- **Enhanced with comprehensive password blocklist:**
+  - Loaded from `src/auth/data/common_passwords.txt`
+  - Contains 150+ known weak/common passwords
+  - Based on security research (SecLists, HaveIBeenPwned, NCSC)
+  - Cached in memory for fast lookups (O(1) performance)
+  - Updatable via `scripts/update-password-list.sh`
+  - Falls back to basic list if file is missing
 
 **Files Modified:**
-- `src/auth/services.py`: Added `validate_password_strength()` function
+- `src/auth/services.py`: Added `validate_password_strength()` function with file-based password list
+- `src/auth/data/common_passwords.txt`: Curated list of weak passwords (new)
+- `src/auth/data/README.md`: Documentation for maintaining the password list (new)
+- `scripts/update-password-list.sh`: Script to update password list (new)
 - `tests/conftest.py`: Updated test fixtures with strong passwords
 
 **Verification:**
 - ✅ Weak passwords rejected (tested with "123", "password", "abc123")
 - ✅ Strong passwords accepted (tested with complex passwords)
+- ✅ Common password variants blocked ("Password123!", "Welcome123!")
+- ✅ Password list loads correctly from file
+- ✅ Cache mechanism working (150 passwords loaded)
 - ✅ All authentication tests passing
 
 ---

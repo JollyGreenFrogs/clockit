@@ -5,7 +5,8 @@ Authentication services for user management, JWT tokens, and security
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, Optional, Set, Tuple
 
 import bcrypt
 import jwt
@@ -16,9 +17,58 @@ from database.auth_models import AuditLog, User
 from database.models import Category
 
 
+# Cache for common passwords list
+_COMMON_PASSWORDS_CACHE: Optional[Set[str]] = None
+
+
+def _load_common_passwords() -> Set[str]:
+    """
+    Load common passwords from file.
+    Uses caching to avoid reading file on every validation.
+    
+    Returns:
+        Set of common passwords (lowercase)
+    """
+    global _COMMON_PASSWORDS_CACHE
+    
+    if _COMMON_PASSWORDS_CACHE is not None:
+        return _COMMON_PASSWORDS_CACHE
+    
+    # Try to load from file
+    password_file = Path(__file__).parent / "data" / "common_passwords.txt"
+    
+    common_passwords = set()
+    
+    if password_file.exists():
+        try:
+            with open(password_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if line and not line.startswith('#'):
+                        common_passwords.add(line.lower())
+        except Exception as e:
+            # Log error but don't fail - fall back to basic list
+            print(f"Warning: Could not load common passwords file: {e}")
+    
+    # Fallback to basic list if file doesn't exist or is empty
+    if not common_passwords:
+        common_passwords = {
+            'password', 'password123', 'admin', 'admin123',
+            'qwerty', '123456', '12345678', 'password1', 'password1!',
+            'welcome', 'welcome123', 'letmein', '1234567890',
+            'abc123', 'password!', 'admin1', 'test123'
+        }
+    
+    _COMMON_PASSWORDS_CACHE = common_passwords
+    return common_passwords
+
+
 def validate_password_strength(password: str) -> Tuple[bool, str]:
     """
-    Validate password meets security requirements
+    Validate password meets security requirements.
+    Checks against a comprehensive list of common/weak passwords.
+    
     Returns: (is_valid, error_message)
     """
     if len(password) < 12:
@@ -46,12 +96,8 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
         if re.search(pattern, password.lower()):
             return False, "Password contains common patterns and is too predictable"
     
-    # Check against common passwords
-    common_passwords = [
-        'password', 'password123', 'admin', 'admin123', 
-        'qwerty', '123456', '12345678', 'password1', 'password1!',
-        'welcome', 'welcome123', 'letmein'
-    ]
+    # Check against comprehensive list of common passwords
+    common_passwords = _load_common_passwords()
     if password.lower() in common_passwords:
         return False, "Password is too common. Please choose a stronger password"
     

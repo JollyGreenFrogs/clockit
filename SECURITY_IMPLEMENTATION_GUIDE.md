@@ -61,7 +61,9 @@ This guide provides quick instructions for developers and DevOps teams to unders
 1. **Strong Password Requirements**
    - Minimum 12 characters
    - Must include: uppercase, lowercase, numbers, special characters
-   - Blocks common passwords and patterns
+   - Blocks common passwords against a comprehensive list (150+ passwords)
+   - Checks against known weak passwords from security research
+   - Updatable password blocklist (see `src/auth/data/README.md`)
 
 2. **Mandatory SECRET_KEY Configuration**
    - No default fallback (application will fail if not set)
@@ -153,9 +155,23 @@ Users must now create passwords that:
 - Contain at least one number (0-9)
 - Contain at least one special character (!@#$%^&*...)
 - Don't contain obvious patterns (1234, aaaa, etc.)
-- Aren't in the common password list
+- Aren't in the common password list (150+ known weak passwords)
 
 **Example valid password:** `MySecure!Pass9876`
+
+### Maintaining the Password Blocklist
+
+The application checks passwords against a curated list of weak/common passwords.
+
+**Update the list:**
+```bash
+./scripts/update-password-list.sh
+```
+
+**Manual editing:**
+Edit `src/auth/data/common_passwords.txt` and restart the application.
+
+See `src/auth/data/README.md` for detailed maintenance instructions.
 
 ## Rate Limiting
 
