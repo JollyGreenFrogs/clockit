@@ -120,32 +120,32 @@ SECRET_KEY=your-secret-key
 
 ## 🧪 Testing
 
-### Backend Tests (Python)
-```bash
-# Run all backend tests
-pytest
+### Quick Start
 
-# Run specific test file
-pytest tests/test_config.py
+```bash
+# Setup environment
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+
+# Run all tests
+pytest
 
 # Run with coverage
 pytest --cov=src tests/
 ```
 
-### Frontend Tests (React)
-```bash
-cd react-frontend
+### Detailed Testing Guide
 
-# Component tests (Vitest)
-npm run test              # Watch mode
-npm run test:run          # Single run
+For comprehensive testing instructions including:
+- Environment setup
+- Running specific tests
+- Troubleshooting common issues
+- Frontend testing
+- CI/CD information
 
-# E2E tests (Playwright)
-npm run test:e2e          # Full browser testing
-
-# All frontend tests
-npm run test:run && npm run test:e2e
-```
+See **[TESTING.md](TESTING.md)** for the complete guide.
 
 ### CI/CD Pipeline
 - ✅ **Backend testing**: pytest with Python 3.12
