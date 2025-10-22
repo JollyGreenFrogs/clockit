@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from src.config import Config
+from config import Config
 
 
 def test_default_config_values():
@@ -38,7 +38,7 @@ def test_environment_variable_override():
     # Need to reload config to pick up new env vars
     import importlib
 
-    from src import config
+    import config
 
     importlib.reload(config)
 
@@ -67,7 +67,7 @@ def test_config_validation_postgres():
     """Test configuration validation for PostgreSQL storage"""
     import importlib
 
-    from src import config
+    import config
 
     importlib.reload(config)
 
@@ -80,7 +80,7 @@ def test_config_validation_production_missing_secret():
     """Test configuration validation fails in production without secret key"""
     import importlib
 
-    from src import config
+    import config
 
     importlib.reload(config)
 
