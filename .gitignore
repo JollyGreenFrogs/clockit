@@ -58,6 +58,9 @@ Thumbs.db
 clockit_data/
 data/
 
+# Exception: Allow password security data
+!src/auth/data/
+
 # Application configuration and data files
 *.json
 
@@ -97,5 +100,15 @@ desktop/
 electron/
 
 # Local environment files
+.env
 .env.local
 .env.*.local
+.env.docker
+.env.production
+.env.staging
+
+# Security - Never commit secrets
+secrets/
+*.pem
+*.key
+*.crt

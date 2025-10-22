@@ -117,7 +117,7 @@ def test_user_data():
     return {
         "username": f"testuser_{unique_id}",
         "email": f"test_{unique_id}@example.com",
-        "password": "testpass123",
+        "password": "TestPass!@#$567",  # Strong password meeting new requirements (no sequential patterns)
         "full_name": "Test User",
     }
 

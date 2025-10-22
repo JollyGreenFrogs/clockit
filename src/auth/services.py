@@ -3,8 +3,10 @@ Authentication services for user management, JWT tokens, and security
 """
 
 import os
+import re
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional, Set, Tuple
 
 import bcrypt
 import jwt
@@ -15,14 +17,108 @@ from database.auth_models import AuditLog, User
 from database.models import Category
 
 
+# Cache for common passwords list
+_COMMON_PASSWORDS_CACHE: Optional[Set[str]] = None
+
+
+def _load_common_passwords() -> Set[str]:
+    """
+    Load common passwords from file.
+    Uses caching to avoid reading file on every validation.
+    
+    Returns:
+        Set of common passwords (lowercase)
+    """
+    global _COMMON_PASSWORDS_CACHE
+    
+    if _COMMON_PASSWORDS_CACHE is not None:
+        return _COMMON_PASSWORDS_CACHE
+    
+    # Try to load from file
+    password_file = Path(__file__).parent / "data" / "common_passwords.txt"
+    
+    common_passwords = set()
+    
+    if password_file.exists():
+        try:
+            with open(password_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if line and not line.startswith('#'):
+                        common_passwords.add(line.lower())
+        except Exception as e:
+            # Log error but don't fail - fall back to basic list
+            print(f"Warning: Could not load common passwords file: {e}")
+    
+    # Fallback to basic list if file doesn't exist or is empty
+    if not common_passwords:
+        common_passwords = {
+            'password', 'password123', 'admin', 'admin123',
+            'qwerty', '123456', '12345678', 'password1', 'password1!',
+            'welcome', 'welcome123', 'letmein', '1234567890',
+            'abc123', 'password!', 'admin1', 'test123'
+        }
+    
+    _COMMON_PASSWORDS_CACHE = common_passwords
+    return common_passwords
+
+
+def validate_password_strength(password: str) -> Tuple[bool, str]:
+    """
+    Validate password meets security requirements.
+    Checks against a comprehensive list of common/weak passwords.
+    
+    Returns: (is_valid, error_message)
+    """
+    if len(password) < 12:
+        return False, "Password must be at least 12 characters long"
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]', password):
+        return False, "Password must contain at least one special character"
+    
+    # Check for common patterns
+    common_patterns = [
+        r'(.)\1{3,}',  # Repeated characters (aaaa, 1111) - 4+ times
+        r'(0123|1234|2345|3456|4567|5678|6789|7890)',  # Sequential numbers (4+ digits)
+    ]
+    
+    for pattern in common_patterns:
+        if re.search(pattern, password.lower()):
+            return False, "Password contains common patterns and is too predictable"
+    
+    # Check against comprehensive list of common passwords
+    common_passwords = _load_common_passwords()
+    if password.lower() in common_passwords:
+        return False, "Password is too common. Please choose a stronger password"
+    
+    return True, ""
+
+
 class AuthService:
     """Handles all authentication-related operations"""
 
     def __init__(self, db: Session):
         self.db = db
-        self.secret_key = os.getenv(
-            "SECRET_KEY", "your-secret-key-change-in-production"
-        )
+        self.secret_key = os.getenv("SECRET_KEY")
+        if not self.secret_key:
+            raise RuntimeError(
+                "SECRET_KEY environment variable must be set. "
+                "Generate one using: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+            )
+        if len(self.secret_key) < 32:
+            raise RuntimeError(
+                "SECRET_KEY must be at least 32 characters long for security"
+            )
         self.algorithm = "HS256"
         self.access_token_expire_minutes = 15
         self.refresh_token_expire_days = 7
@@ -49,10 +145,11 @@ class AuthService:
             )
 
         # Validate password strength
-        if len(password) < 6:
+        is_valid, error_message = validate_password_strength(password)
+        if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password must be at least 6 characters long",
+                detail=error_message
             )
 
         # Hash password with bcrypt

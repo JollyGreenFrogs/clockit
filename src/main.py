@@ -159,18 +159,51 @@ app = FastAPI(
     title="ClockIt - Time Tracker", version=get_full_version_info()["version"]
 )
 
-# Add CORS middleware to allow frontend connections
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Setup security middleware (HTTPS redirect and security headers)
+try:
+    from .middleware.security import setup_security_middleware
+    from .middleware.rate_limit import setup_rate_limiting, limiter
+    setup_security_middleware(app)
+    setup_rate_limiting(app)
+except ImportError:
+    from middleware.security import setup_security_middleware
+    from middleware.rate_limit import setup_rate_limiting, limiter
+    setup_security_middleware(app)
+    setup_rate_limiting(app)
+
+# Configure CORS based on environment
+if Config.ENVIRONMENT == "production":
+    # In production, use explicit origins from environment variable
+    cors_origins_str = os.getenv("CORS_ORIGINS", "")
+    allowed_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+    if not allowed_origins:
+        logger.warning("No CORS origins configured for production - CORS will be restrictive")
+        allowed_origins = []
+else:
+    # Development origins
+    allowed_origins = [
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Alternative React dev server
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
-    ],
+    ]
+
+# Add CORS middleware to allow frontend connections
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicit methods
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "X-Requested-With",
+    ],  # Explicit headers
+    expose_headers=["Content-Disposition"],  # For file downloads
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Initialize application on startup

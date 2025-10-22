@@ -5,7 +5,12 @@ Pydantic schemas for API request/response models
 from datetime import datetime
 from typing import Dict, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
+
+try:
+    from .utils.validation import sanitize_string, sanitize_description, validate_task_name
+except ImportError:
+    from utils.validation import sanitize_string, sanitize_description, validate_task_name
 
 
 # Task-related schemas
@@ -17,6 +22,28 @@ class TaskCreate(BaseModel):
     category: Optional[str] = Field(None, max_length=100)
     time_spent: Optional[float] = Field(0.0, ge=0)
     hourly_rate: Optional[float] = Field(None, ge=0)
+    
+    @validator('task_name')
+    def validate_and_sanitize_task_name(cls, v):
+        """Validate and sanitize task name"""
+        is_valid, error_msg = validate_task_name(v)
+        if not is_valid:
+            raise ValueError(error_msg)
+        return sanitize_string(v, max_length=255)
+    
+    @validator('description')
+    def sanitize_task_description(cls, v):
+        """Sanitize description"""
+        if v:
+            return sanitize_description(v, max_length=1000)
+        return v
+    
+    @validator('category')
+    def sanitize_category(cls, v):
+        """Sanitize category"""
+        if v:
+            return sanitize_string(v, max_length=100)
+        return v
 
 
 class TaskUpdate(BaseModel):
@@ -26,6 +53,20 @@ class TaskUpdate(BaseModel):
     category: Optional[str] = Field(None, max_length=100)
     time_spent: Optional[float] = Field(None, ge=0)
     hourly_rate: Optional[float] = Field(None, ge=0)
+    
+    @validator('description')
+    def sanitize_task_description(cls, v):
+        """Sanitize description"""
+        if v:
+            return sanitize_description(v, max_length=1000)
+        return v
+    
+    @validator('category')
+    def sanitize_category(cls, v):
+        """Sanitize category"""
+        if v:
+            return sanitize_string(v, max_length=100)
+        return v
 
 
 class TaskResponse(BaseModel):
@@ -58,6 +99,18 @@ class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     color: Optional[str] = Field(None, max_length=7)  # Hex color
+    
+    @validator('name')
+    def sanitize_name(cls, v):
+        """Sanitize category name"""
+        return sanitize_string(v, max_length=100)
+    
+    @validator('description')
+    def sanitize_cat_description(cls, v):
+        """Sanitize category description"""
+        if v:
+            return sanitize_string(v, max_length=500)
+        return v
 
 
 class CategoryResponse(BaseModel):

@@ -31,9 +31,11 @@ services:
       - DATABASE_TYPE=postgres
       - POSTGRES_HOST=clockit-db
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=clockit
-      - POSTGRES_USER=clockit
-      - POSTGRES_PASSWORD=clockit_password
+      - POSTGRES_DB=${POSTGRES_DB:-clockit}
+      - POSTGRES_USER=${POSTGRES_USER:-clockit}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     depends_on:
       - clockit-db
     volumes:
@@ -51,15 +53,15 @@ services:
   clockit-db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=clockit
-      - POSTGRES_USER=clockit
-      - POSTGRES_PASSWORD=clockit_password
+      - POSTGRES_DB=${POSTGRES_DB:-clockit}
+      - POSTGRES_USER=${POSTGRES_USER:-clockit}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432" # Expose for development/debugging only
+    # Port exposure removed for security - use internal networking only
+    # To access database for debugging, use: docker exec -it clockit-db psql -U clockit
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U clockit -d clockit"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clockit} -d ${POSTGRES_DB:-clockit}"]
       interval: 30s
       timeout: 10s
       retries: 5
