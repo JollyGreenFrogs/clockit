@@ -13,6 +13,7 @@ import jwt
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from config import Config
 from database.auth_models import AuditLog, User
 from database.models import Category
 
@@ -109,12 +110,16 @@ class AuthService:
 
     def __init__(self, db: Session):
         self.db = db
-        self.secret_key = os.getenv("SECRET_KEY")
-        if not self.secret_key:
-            raise RuntimeError(
-                "SECRET_KEY environment variable must be set. "
-                "Generate one using: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
-            )
+        self.secret_key = Config.SECRET_KEY
+        
+        # Additional validation for production environment
+        if Config.ENVIRONMENT == "production":
+            if not self.secret_key or self.secret_key == "test-secret-key-for-development-only":
+                raise RuntimeError(
+                    "SECRET_KEY environment variable must be set in production. "
+                    "Generate one using: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+                )
+        
         if len(self.secret_key) < 32:
             raise RuntimeError(
                 "SECRET_KEY must be at least 32 characters long for security"
