@@ -9,6 +9,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Check if rate limiting should be enabled
+try:
+    from config import Config
+    RATE_LIMITING_ENABLED = getattr(Config, 'ENABLE_RATE_LIMITING', True)
+except ImportError:
+    RATE_LIMITING_ENABLED = True
+
+if RATE_LIMITING_ENABLED:
+    logger.info("Rate limiting enabled")
+else:
+    logger.info("Rate limiting disabled")
+
 
 def get_user_or_ip(request: Request) -> str:
     """

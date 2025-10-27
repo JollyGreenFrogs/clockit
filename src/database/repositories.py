@@ -3,9 +3,10 @@ Database repositories for data access layer
 """
 
 import uuid
+from datetime import datetime
 from typing import Dict, List, Optional
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from .models import Category, Currency, Task, TimeEntry, UserConfig
@@ -346,6 +347,21 @@ class TimeEntryRepository:
                 description=description,
             )
             self.db.add(entry)
+            
+            # Update task's total time_spent if task_id is provided
+            if task_id:
+                task = self.db.query(Task).filter(
+                    and_(Task.id == task_id, Task.user_id == uuid.UUID(user_id))
+                ).first()
+                if task:
+                    # Calculate new total time_spent by summing all time entries for this task
+                    total_time = self.db.query(func.sum(TimeEntry.duration)).filter(
+                        and_(TimeEntry.task_id == task_id, TimeEntry.user_id == uuid.UUID(user_id))
+                    ).scalar() or 0.0
+                    total_time += duration  # Add the current entry
+                    task.time_spent = total_time
+                    task.updated_at = datetime.utcnow()
+            
             self.db.commit()
             return True
         except Exception as e:

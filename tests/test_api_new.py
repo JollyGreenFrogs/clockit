@@ -46,7 +46,7 @@ class TestTaskEndpoints:
 
         data = response.json()
         assert "tasks" in data
-        assert isinstance(data["tasks"], list)
+        assert isinstance(data["tasks"], dict)
 
     def test_get_tasks_unauthenticated(self, test_client):
         """Test getting tasks without authentication should fail"""
@@ -102,12 +102,12 @@ class TestUserDataIsolation:
         user1_data = {
             "username": "user1",
             "email": "user1@example.com",
-            "password": "password123",
+            "password": "TestPassword123!",
         }
         user2_data = {
             "username": "user2",
             "email": "user2@example.com",
-            "password": "password123",
+            "password": "TestPassword123!",
         }
 
         # Register both users

@@ -5,7 +5,6 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, validator
 
 # Handle imports that work from both project root and src directory
 try:
@@ -21,6 +20,14 @@ try:
     from .database.repositories import ConfigRepository, CurrencyRepository
     from .logging_config import configure_logging
     from .version import get_full_version_info, get_version_string
+    # Import Pydantic models from data_models
+    from .data_models.requests import (
+        TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate, TaskUpdate,
+        OnboardingData, RateConfig, CurrencyConfig, CategoryCreate
+    )
+    from .data_models.responses import (
+        OnboardingStatus, TaskResponse, CategoryResponse, MessageResponse
+    )
 except ImportError:
     # Fallback for when running from src directory
     from version import get_version_string, get_full_version_info
@@ -35,6 +42,14 @@ except ImportError:
     from auth.routes import router as auth_router
     from auth.dependencies import get_current_user
     from database.auth_models import User
+    # Import Pydantic models from data_models
+    from data_models.requests import (
+        TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate, TaskUpdate,
+        OnboardingData, RateConfig, CurrencyConfig, CategoryCreate
+    )
+    from data_models.responses import (
+        OnboardingStatus, TaskResponse, CategoryResponse, MessageResponse
+    )
 
 
 import logging
@@ -89,60 +104,6 @@ def initialize_application() -> None:
         )
 
     logger.info("Application initialization complete")
-
-
-# Pydantic models for API requests
-class TimeEntry(BaseModel):
-    task_id: str
-    hours: float
-    date: str
-    description: Optional[str] = ""
-
-
-class TaskCreate(BaseModel):
-    name: str
-    description: Optional[str] = ""
-    category: str  # Made mandatory - no default value
-
-    @validator("name")
-    def validate_task_name(cls, v):
-        if not v or not v.strip():
-            raise ValueError("Task name cannot be empty")
-
-        # Check for excessive spaces
-        if "  " in v:  # Multiple consecutive spaces
-            raise ValueError("Task name cannot contain multiple consecutive spaces.")
-
-        if v != v.strip():
-            raise ValueError("Task name cannot start or end with spaces.")
-
-        # Ensure reasonable length
-        if len(v) > 100:
-            raise ValueError("Task name must be 100 characters or less.")
-
-        return v.strip()
-
-
-class OnboardingData(BaseModel):
-    """Schema for onboarding completion data"""
-    default_category: str
-    categories: list[str]
-
-
-class OnboardingStatus(BaseModel):
-    """Schema for onboarding status response"""
-    onboarding_completed: bool
-    default_category: Optional[str] = None
-    needs_onboarding: bool
-
-
-class RateConfig(BaseModel):
-    task_type: str
-    day_rate: float
-
-
-class CurrencyConfig(BaseModel):
-    currency: str  # Just the currency code
 
 
 # Load invoice columns config
@@ -293,9 +254,7 @@ async def add_time_entry(
 
         success = task_manager.add_time_entry_by_id(
             task_id=task_id,
-            duration=time_entry.hours,
-            description=time_entry.description or "",
-            date=time_entry.date,
+            time_entry=time_entry,
             user_id=str(current_user.id),
         )
 
@@ -383,11 +342,6 @@ async def delete_time_entry(entry_id: int, current_user: User = Depends(get_curr
         raise HTTPException(status_code=500, detail=f"Failed to delete time entry: {str(e)}")
 
 
-class TimeEntryUpdate(BaseModel):
-    duration: Optional[float] = None
-    description: Optional[str] = None
-
-
 @app.put("/time-entries/{entry_id}")
 async def update_time_entry(
     entry_id: int,
@@ -410,10 +364,6 @@ async def update_time_entry(
     except Exception as e:
         logger.exception("Error updating time entry: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to update time entry: {str(e)}")
-
-
-class TaskCategoryUpdate(BaseModel):
-    category: str
 
 
 @app.put("/tasks/{task_id}/category")
@@ -708,10 +658,8 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
                 )
 
             preview_lines.append("")
-            currency = result.get('currency', {})
-            currency_symbol = currency.get('symbol', '$') if isinstance(currency, dict) else '$'
             total_amount = result.get('total', '0.00')
-            preview_lines.append(f"TOTAL: {currency_symbol}{total_amount}")
+            preview_lines.append(f"TOTAL: {total_amount}")
             preview_lines.append(f"Total Hours: {total_hours:.2f}")
 
         preview_text = "\n".join(preview_lines)

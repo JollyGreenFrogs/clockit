@@ -75,7 +75,8 @@ def test_config_validation_postgres():
     assert config.Config.get_database_url() is not None
 
 
-@patch.dict(os.environ, {"ENVIRONMENT": "production"})
+@patch.dict(os.environ, {"ENVIRONMENT": "production"}, clear=False)
+@patch.dict(os.environ, {"SECRET_KEY": ""}, clear=False)
 def test_config_validation_production_missing_secret():
     """Test configuration validation fails in production without secret key"""
     import importlib

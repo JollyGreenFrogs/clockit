@@ -109,6 +109,7 @@ class TestTaskIDBasedAPI:
         task_data = {
             "name": "General IT/Tech work",
             "description": "IT and technical work tasks",
+            "category": "Development",
         }
 
         response = authenticated_client.post("/tasks", json=task_data)
@@ -159,7 +160,9 @@ class TestTaskIDBasedAPI:
         mock_add_time.assert_called_once()
         call_args = mock_add_time.call_args
         assert call_args[1]["task_id"] == task_id
-        assert call_args[1]["duration"] == 2.5
+        # Check the time_entry object hours attribute  
+        time_entry_obj = call_args[1]["time_entry"]
+        assert time_entry_obj.hours == 2.5
 
     @patch("business.task_manager.TaskManager.get_task_by_id")
     @patch("business.task_manager.TaskManager.delete_task")

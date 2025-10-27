@@ -23,15 +23,15 @@ def test_invoice_manager_data_structure():
         "tasks": {
             "task1": {
                 "name": "Development Task",
-                "total_hours": 8.0,
+                "time_spent": 8.0,
                 "exported": False,
-                "parent_heading": "Development"
+                "category": "Development"
             },
             "task2": {
                 "name": "Testing Task", 
-                "total_hours": 4.0,
+                "time_spent": 4.0,
                 "exported": False,
-                "parent_heading": "Testing"
+                "category": "Testing"
             }
         }
     }
@@ -108,10 +108,8 @@ def test_backend_preview_endpoint_mock():
             )
 
         preview_lines.append("")
-        currency = mock_invoice_data.get('currency', {})
-        currency_symbol = currency.get('symbol', '$') if isinstance(currency, dict) else '$'
         total_amount = mock_invoice_data.get('total', '0.00')
-        preview_lines.append(f"TOTAL: {currency_symbol}{total_amount}")
+        preview_lines.append(f"TOTAL: {total_amount}")
         preview_lines.append(f"Total Hours: {total_hours:.2f}")
     
     preview_text = "\n".join(preview_lines)

@@ -20,11 +20,10 @@ from database.connection import get_db
 
 # Import rate limiter
 try:
-    from middleware.rate_limit import limiter
-    from config import Config
-    # Create a conditional decorator
-    if Config.ENVIRONMENT == "test":
-        # Dummy decorator for tests
+    from middleware.rate_limit import limiter, RATE_LIMITING_ENABLED
+    # Create a conditional decorator - disable rate limiting for tests or when explicitly disabled
+    if not RATE_LIMITING_ENABLED:
+        # Dummy decorator for tests or when rate limiting is disabled
         class DummyLimiter:
             def limit(self, limit_string):
                 def decorator(func):

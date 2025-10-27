@@ -65,6 +65,9 @@ class Config:
         "LOG_FORMAT", "json" if ENVIRONMENT == "production" else "text"
     )
 
+    # Rate limiting
+    ENABLE_RATE_LIMITING = os.environ.get("ENABLE_RATE_LIMITING", "true").lower() == "true"
+
     # Cloud-specific settings
     CLOUD_PROVIDER = os.environ.get("CLOUD_PROVIDER")  # 'aws', 'gcp', 'azure', None
     REDIS_URL = os.environ.get("REDIS_URL")  # For session storage/caching
