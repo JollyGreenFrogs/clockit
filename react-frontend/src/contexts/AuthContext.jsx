@@ -233,7 +233,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authenticatedFetch('/onboarding/status');
       if (response.ok) {
-        return await response.json();
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return await response.json();
+        } else {
+          console.warn('Onboarding status response is not JSON:', await response.text());
+          return null;
+        }
       }
       return null;
     } catch (error) {

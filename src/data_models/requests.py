@@ -4,7 +4,7 @@ Includes comprehensive validation and sanitization for cybersecurity
 """
 
 from datetime import datetime
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 from pydantic import BaseModel, validator, Field
 
 from utils.validation import sanitize_string, sanitize_description, validate_task_name
@@ -237,6 +237,10 @@ class OnboardingData(BaseModel):
     
     default_category: str = Field(..., min_length=1, max_length=100)
     categories: List[str] = Field(..., description="List of categories to create")
+    rates: Dict[str, float] = Field(..., description="Rates for each category")
+    currency_code: str = Field(..., min_length=3, max_length=3, description="Currency code (e.g., USD, EUR)")
+    currency_symbol: str = Field(..., min_length=1, max_length=5, description="Currency symbol (e.g., $, €)")
+    currency_name: str = Field(..., min_length=1, max_length=50, description="Currency name (e.g., US Dollar)")
 
     @validator('default_category')
     def sanitize_default_category(cls, v):
@@ -261,9 +265,49 @@ class OnboardingData(BaseModel):
         
         return sanitized
 
+    @validator('rates')
+    def validate_rates(cls, v, values):
+        """Validate that rates are provided for all categories"""
+        if 'categories' in values and 'default_category' in values:
+            all_categories = set(values['categories'])
+            all_categories.add(values['default_category'])
+            
+            # Check that all categories have rates
+            missing_rates = all_categories - set(v.keys())
+            if missing_rates:
+                raise ValueError(f"Rates must be provided for all categories: {missing_rates}")
+            
+            # Check that all rates are positive
+            for category, rate in v.items():
+                if rate <= 0:
+                    raise ValueError(f"Rate for {category} must be positive")
+        
+        return v
+
+    @validator('currency_code')
+    def validate_currency_code(cls, v):
+        """Validate currency code format"""
+        if not v or len(v) != 3:
+            raise ValueError("Currency code must be exactly 3 characters")
+        return v.upper()
+
+    @validator('currency_symbol')
+    def validate_currency_symbol(cls, v):
+        """Validate currency symbol"""
+        if not v or not v.strip():
+            raise ValueError("Currency symbol cannot be empty")
+        return v.strip()
+
+    @validator('currency_name')
+    def validate_currency_name(cls, v):
+        """Validate currency name"""
+        if not v or not v.strip():
+            raise ValueError("Currency name cannot be empty")
+        return sanitize_string(v.strip(), max_length=50)
+
 
 # =============================================================================
-# CONFIGURATION REQUESTS  
+# CONFIGURATION REQUESTS
 # =============================================================================
 
 class RateConfig(BaseModel):

@@ -28,6 +28,7 @@ export default defineConfig({
       '/currencies': 'http://localhost:8001',
       '/categories': 'http://localhost:8001',
       '/invoice': 'http://localhost:8001',
+      '/onboarding': 'http://localhost:8001',
       '/health': 'http://localhost:8001',
       '/version': 'http://localhost:8001',
       '/system': 'http://localhost:8001'

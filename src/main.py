@@ -12,6 +12,7 @@ try:
     from .auth.routes import router as auth_router
     from .business.currency_manager import CurrencyManager
     from .business.invoice_manager import InvoiceManager
+    from .business.rate_manager import RateManager
     from .business.task_manager import TaskManager
     from .config import Config
     from .database.auth_models import User
@@ -39,6 +40,7 @@ except ImportError:
     from business.task_manager import TaskManager
     from business.currency_manager import CurrencyManager
     from business.invoice_manager import InvoiceManager
+    from business.rate_manager import RateManager
     from auth.routes import router as auth_router
     from auth.dependencies import get_current_user
     from database.auth_models import User
@@ -83,6 +85,7 @@ DATA_DIR = Config.DATA_DIR
 # Initialize business managers (database-only)
 task_manager = TaskManager()
 currency_manager = CurrencyManager()
+rate_manager = RateManager(DATA_DIR)
 invoice_manager = InvoiceManager(
     DATA_DIR, task_manager
 )  # Keep for invoice file exports
@@ -677,7 +680,7 @@ async def get_onboarding_status(current_user: User = Depends(get_current_user)):
     try:
         return OnboardingStatus(
             onboarding_completed=bool(current_user.onboarding_completed),
-            default_category=current_user.default_category,
+            default_category=getattr(current_user, 'default_category', None),
             needs_onboarding=not bool(current_user.onboarding_completed)
         )
     except Exception as e:
@@ -712,10 +715,27 @@ async def complete_onboarding(
                     color="#007bff"  # Default blue color
                 )
 
+        # Save rates for all categories (including default category)
+        for category_name, rate in onboarding_data.rates.items():
+            if category_name.strip() and rate > 0:
+                rate_manager.set_rate(category_name.strip(), rate)
+
+        # Save currency configuration
+        currency_success = currency_manager.set_currency(
+            code=onboarding_data.currency_code,
+            symbol=onboarding_data.currency_symbol,
+            name=onboarding_data.currency_name
+        )
+
+        if not currency_success:
+            logger.warning("Failed to save currency configuration during onboarding")
+
         return {
             "message": "Onboarding completed successfully",
             "default_category": onboarding_data.default_category,
-            "categories_created": len(onboarding_data.categories)
+            "categories_created": len(onboarding_data.categories),
+            "rates_created": len(onboarding_data.rates),
+            "currency_set": f"{onboarding_data.currency_code} ({onboarding_data.currency_symbol})"
         }
 
     except Exception as e:

@@ -108,15 +108,27 @@ class TestRequestModels:
         # Test valid onboarding data
         onboarding = OnboardingData(
             default_category="Work",
-            categories=["Work", "Personal", "Learning"]
+            categories=["Work", "Personal", "Learning"],
+            rates={"Work": 50.0, "Personal": 25.0, "Learning": 30.0},
+            currency_code="USD",
+            currency_symbol="$",
+            currency_name="US Dollar"
         )
         assert onboarding.default_category == "Work"
         assert len(onboarding.categories) == 3
+        assert onboarding.currency_code == "USD"
+        assert onboarding.currency_symbol == "$"
+        assert onboarding.currency_name == "US Dollar"
+        assert onboarding.rates["Work"] == 50.0
         
         # Test category list sanitization
         onboarding_with_spaces = OnboardingData(
             default_category="Work",
-            categories=["Work", "  Personal  ", "Learning", "", "   "]
+            categories=["Work", "  Personal  ", "Learning", "", "   "],
+            rates={"Work": 50.0, "Personal": 25.0, "Learning": 30.0},
+            currency_code="EUR",
+            currency_symbol="€",
+            currency_name="Euro"
         )
         # Should filter out empty strings and trim whitespace
         valid_categories = [cat for cat in onboarding_with_spaces.categories if cat.strip()]

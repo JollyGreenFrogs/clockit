@@ -11,14 +11,6 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
   const [editingEntry, setEditingEntry] = useState(null)
   const { authenticatedFetch } = useAuth()
 
-  useEffect(() => {
-    if (isOpen && task) {
-      loadTimeEntries()
-      loadCategories()
-      setSelectedCategory(task.category || '')
-    }
-  }, [isOpen, task, loadTimeEntries, loadCategories])
-
   const loadTimeEntries = useCallback(async () => {
     if (!task) return
     try {
@@ -55,6 +47,14 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
       console.error('Error loading categories:', error)
     }
   }, [authenticatedFetch])
+
+  useEffect(() => {
+    if (isOpen && task) {
+      loadTimeEntries()
+      loadCategories()
+      setSelectedCategory(task.category || '')
+    }
+  }, [isOpen, task, loadTimeEntries, loadCategories])
 
   const updateTaskCategory = async () => {
     try {
