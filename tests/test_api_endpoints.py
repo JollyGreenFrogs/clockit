@@ -40,7 +40,7 @@ def get_auth_headers(client):
     user_data = {
         "username": f"testuser_{unique_id}",
         "email": f"test_{unique_id}@example.com",
-        "password": "testpass123",
+        "password": "TestPassword123!",
         "full_name": "Test User",
     }
 
@@ -104,7 +104,7 @@ def test_system_data_location_endpoint(client, temp_data_dir):
     user_data = {
         "username": f"testuser_sysinfo_{unique_id}",
         "email": f"test_sysinfo_{unique_id}@example.com",
-        "password": "testpass123",
+        "password": "TestPassword123!",
         "full_name": "Test User",
     }
     register_response = client.post("/auth/register", json=user_data)
@@ -159,7 +159,7 @@ def test_create_task_endpoint(client, temp_data_dir):
     task_data = {
         "name": "Test Task",
         "description": "A test task",
-        "parent_heading": "Development",
+        "category": "Development",
     }
 
     response = client.post("/tasks", json=task_data, headers=headers)

@@ -1,6 +1,8 @@
 # ClockIt - Professional Time Tracker
 
-A modern, cloud-ready time tracking application built with FastAPI. Track time spent on projects and generate invoices.
+[![CI](https://github.com/JollyGreenFrogs/clockit/actions/workflows/ci.yml/badge.svg)](https://github.com/JollyGreenFrogs/clockit/actions/workflows/ci.yml)
+
+A modern, cloud-ready time tracking application built with FastAPI and React. Track time spent on projects and generate invoices.
 
 ## ✨ Features
 
@@ -11,6 +13,19 @@ A modern, cloud-ready time tracking application built with FastAPI. Track time s
 - 🏗️ **Cloud-Ready**: Docker and Kubernetes deployment support
 - 🛡️ **Production Ready**: Health checks, structured logging, and security best practices
 - 💾 **Flexible Storage**: File-based (development) or PostgreSQL (production)
+
+## 🛡️ Security Notice
+
+**Important:** A comprehensive security audit has been completed. Before deploying to production, please review:
+
+- 📋 [Security Audit README](SECURITY_AUDIT_README.md) - Start here
+- 🚀 [Quick Start Security Guide](SECURITY_QUICK_START.md) - Fix critical issues in 1 hour
+- 👔 [Executive Summary](SECURITY_EXECUTIVE_SUMMARY.md) - For stakeholders
+
+**Current Security Score:** 5.6/10 (MODERATE RISK)  
+**Status:** Not production-ready without critical fixes
+
+See [SECURITY_AUDIT_SUMMARY.txt](SECURITY_AUDIT_SUMMARY.txt) for a quick overview.
 
 ## 🚀 Quick Start
 
@@ -105,16 +120,39 @@ SECRET_KEY=your-secret-key
 
 ## 🧪 Testing
 
-```bash
-# Run tests
-pytest
+### Quick Start
 
-# Run specific test file
-pytest tests/test_config.py
+```bash
+# Setup environment
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+
+# Run all tests
+pytest
 
 # Run with coverage
 pytest --cov=src tests/
 ```
+
+### Detailed Testing Guide
+
+For comprehensive testing instructions including:
+- Environment setup
+- Running specific tests
+- Troubleshooting common issues
+- Frontend testing
+- CI/CD information
+
+See **[TESTING.md](TESTING.md)** for the complete guide.
+
+### CI/CD Pipeline
+- ✅ **Backend testing**: pytest with Python 3.12
+- ✅ **Frontend testing**: Vitest + Playwright E2E
+- ✅ **Code quality**: black, isort, flake8, ESLint
+- ✅ **Multi-browser testing**: Chromium, Firefox, WebKit
+- ✅ **WSL compatible**: All tests run in headless mode
 
 ## 🏗️ Cloud Deployment
 

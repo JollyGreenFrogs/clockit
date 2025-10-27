@@ -67,12 +67,32 @@ class TestTaskManagerWithMockedDB:
         tm, (task_repo, _, _) = task_manager_with_mocks
         user_id = str(uuid.uuid4())
 
-        # Mock successful repository call
-        task_repo.get_all_tasks_detailed.return_value = {"user_task": 1.5}
+        # Mock successful repository call - should return a list of task dictionaries
+        task_repo.get_all_tasks_detailed.return_value = [
+            {
+                "id": 1,
+                "name": "user_task",
+                "time_spent": 1.5,
+                "description": "Test task",
+                "category": "Development",
+                "hourly_rate": 50.0,
+                "created_at": "2025-10-27T00:00:00",
+                "updated_at": "2025-10-27T00:00:00"
+            }
+        ]
 
         result = tm.load_tasks_for_user(user_id)
 
-        assert result == {"tasks": {"user_task": 1.5}}
+        assert result == {"tasks": {"1": {
+            "id": 1,
+            "name": "user_task",
+            "time_spent": 1.5,
+            "description": "Test task",
+            "category": "Development",
+            "hourly_rate": 50.0,
+            "created_at": "2025-10-27T00:00:00",
+            "updated_at": "2025-10-27T00:00:00"
+        }}}
         task_repo.get_all_tasks_detailed.assert_called_once_with(user_id=user_id)
 
     def test_load_tasks_database_error(self, task_manager_with_mocks):
@@ -192,7 +212,10 @@ class TestTaskManagerWithMockedDB:
 
         result = tm.get_task_categories()
 
-        assert result == ["Development", "Testing"]
+        assert result == [
+            {"name": "Development", "description": "Dev work"},
+            {"name": "Testing", "description": "Test work"},
+        ]
         category_repo.get_all_categories.assert_called_once()
 
     def test_create_category_success(self, task_manager_with_mocks):

@@ -65,6 +65,9 @@ class Config:
         "LOG_FORMAT", "json" if ENVIRONMENT == "production" else "text"
     )
 
+    # Rate limiting
+    ENABLE_RATE_LIMITING = os.environ.get("ENABLE_RATE_LIMITING", "true").lower() == "true"
+
     # Cloud-specific settings
     CLOUD_PROVIDER = os.environ.get("CLOUD_PROVIDER")  # 'aws', 'gcp', 'azure', None
     REDIS_URL = os.environ.get("REDIS_URL")  # For session storage/caching
@@ -102,12 +105,21 @@ class Config:
                 not cls.SECRET_KEY
                 or cls.SECRET_KEY == "test-secret-key-for-development-only"
             ):
-                logger.error("SECRET_KEY must be set in production")
+                logger.error("SECRET_KEY must be set in production and cannot use default value")
+                valid = False
+            elif len(cls.SECRET_KEY) < 32:
+                logger.error("SECRET_KEY must be at least 32 characters long")
                 valid = False
             if cls.DEBUG:
                 logger.warning(
                     "DEBUG is enabled in production - this is not recommended"
                 )
+        else:
+            # Development environment warnings
+            if cls.SECRET_KEY == "test-secret-key-for-development-only":
+                logger.warning("Using default SECRET_KEY for development only - DO NOT use in production")
+            elif not cls.SECRET_KEY or len(cls.SECRET_KEY) < 32:
+                logger.warning("SECRET_KEY should be at least 32 characters long")
 
         # Log configuration summary
         logger.info(

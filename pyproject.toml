@@ -1,8 +1,29 @@
-[tool.poetry]
+[project]
 name = "clockit"
 version = "0.0.0"
 description = "ClockIt - Professional Time Tracker"
-authors = ["JollyGreenFrogs <devnull@example.com>"]
+authors = [
+    {name = "JollyGreenFrogs", email = "devnull@example.com"}
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [build-system]
 requires = ["setuptools", "wheel"]
@@ -17,6 +38,20 @@ profile = "black"
 [tool.flake8]
 max-line-length = 88
 extend-ignore = ["E203"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
 
 [tool.mypy]
 python_version = "3.12"

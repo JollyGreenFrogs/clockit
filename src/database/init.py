@@ -9,6 +9,9 @@ from sqlalchemy.orm import sessionmaker
 
 from .connection import DATABASE_URL, create_tables, engine
 from .repositories import CurrencyRepository
+# Import all models to register them with Base.metadata
+from .auth_models import User
+from .models import UserConfig, Task, TimeEntry, Category
 
 logger = logging.getLogger(__name__)
 

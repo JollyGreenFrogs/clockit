@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 function ManualTimeEntry({ tasks, onTimeAdded }) {
   const [selectedTask, setSelectedTask] = useState('')

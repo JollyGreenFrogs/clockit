@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthProvider } from './contexts/AuthContext'
+import { useAuth } from './hooks/useAuth'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
 import EnhancedStopwatch from './components/EnhancedStopwatch'
@@ -11,6 +12,7 @@ import InvoiceGeneration from './components/InvoiceGeneration'
 import AuthPage from './components/AuthPage'
 import Loading from './components/Loading'
 import UserMenu from './components/UserMenu'
+import OnboardingGuard from './components/OnboardingGuard'
 import './App.css'
 import './jgf-brand.css'
 
@@ -265,7 +267,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <OnboardingGuard>
+        <AppContent />
+      </OnboardingGuard>
     </AuthProvider>
   )
 }

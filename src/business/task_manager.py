@@ -5,6 +5,7 @@ Task management business logic
 import logging
 import os
 import sys
+from datetime import datetime
 from typing import Dict, List, Optional
 
 # Add parent directory to path for imports
@@ -16,6 +17,12 @@ from database.repositories import (
     TaskRepository,
     TimeEntryRepository,
 )
+
+# Import Pydantic models for validation
+try:
+    from ..data_models.requests import TimeEntry as TimeEntryModel
+except ImportError:
+    from data_models.requests import TimeEntry as TimeEntryModel
 
 
 class TaskManager:
@@ -54,8 +61,10 @@ class TaskManager:
         """Load tasks from database for specific user with full details"""
         try:
             task_repo, _, _ = self._get_repositories()
-            tasks = task_repo.get_all_tasks_detailed(user_id=user_id)
-            return {"tasks": tasks}
+            tasks_list = task_repo.get_all_tasks_detailed(user_id=user_id)
+            # Convert list to dictionary with task IDs as keys (expected by invoice manager)
+            tasks_dict = {str(task["id"]): task for task in tasks_list}
+            return {"tasks": tasks_dict}
         except Exception as e:
             self.logger.exception("Error loading tasks for user %s: %s", user_id, e)
             return {"tasks": {}}
@@ -177,44 +186,55 @@ class TaskManager:
     def add_time_entry_by_id(
         self,
         task_id: int,
-        duration: float,
-        date: Optional[str] = None,
-        description: str = "",
-        user_id: Optional[str] = None,
+        time_entry: TimeEntryModel,
+        user_id: str,
     ) -> bool:
-        """Add time entry to a task by ID for a specific user"""
+        """Add time entry to a task by ID for a specific user
+        
+        Args:
+            task_id: The task ID to add time to
+            time_entry: Validated TimeEntry Pydantic model with hours, date, description
+            user_id: User ID for multi-tenant support
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
         try:
+            # Business rule: User ID is required
             if not user_id:
                 self.logger.error("User ID is required for adding time entries")
                 return False
 
+            # Business rule: Validate time entry data (automatically done by Pydantic)
+            # The time_entry parameter is already validated when this method is called
+            
             task_repo, _, time_repo = self._get_repositories()
 
-            # First check if task exists for this user
+            # Business rule: Task must exist for this user
             task = task_repo.get_task_by_id(task_id, user_id)
             if not task:
                 self.logger.error(f"Task ID {task_id} not found for user {user_id}")
                 return False
 
-            # Get the current task time
-            current_time = task.get("time_spent", 0.0)
+            # Business rule: Convert datetime to string for database storage
+            date_str = time_entry.date.isoformat() if time_entry.date else datetime.now().isoformat()
 
-            success = task_repo.create_or_update_task(
-                name=task["name"], time_spent=current_time + duration, user_id=user_id
+            # Coordinate repository operations
+            success = time_repo.add_time_entry(
+                task_name=task["name"],  # Get task name from database
+                duration=time_entry.hours,
+                description=time_entry.description or "",
+                user_id=user_id,
+                task_id=task_id,
             )
 
-            # Then add detailed time entry
             if success:
-                time_repo.add_time_entry(
-                    task_name=task["name"],
-                    duration=duration,
-                    description=description,
-                    user_id=user_id,
-                )
-
+                self.logger.info(f"Added {time_entry.hours}h to task {task_id} for user {user_id}")
+            
             return success
+            
         except Exception as e:
-            self.logger.exception("Error adding time entry by ID: %s", e)
+            self.logger.exception("Error adding time entry: %s", e)
             return False
 
     def delete_task(self, task_name: str, user_id: Optional[str] = None) -> bool:
@@ -230,12 +250,15 @@ class TaskManager:
             self.logger.exception("Error deleting task for user %s: %s", user_id, e)
             return False
 
-    def get_task_categories(self) -> List[str]:
-        """Get all available categories"""
+    def get_task_categories(self, user_id: Optional[str] = None) -> List[Dict]:
+        """Get all available categories for a user"""
         try:
             _, cat_repo, _ = self._get_repositories()
-            categories = cat_repo.get_all_categories()
-            return [cat["name"] for cat in categories]
+            if user_id:
+                categories = cat_repo.get_all_categories(user_id)
+            else:
+                categories = cat_repo.get_all_categories()
+            return categories
         except Exception as e:
             self.logger.exception("Error getting categories: %s", e)
             return []
@@ -259,3 +282,42 @@ class TaskManager:
         except Exception as e:
             self.logger.exception("Error getting task details: %s", e)
             return []
+
+    def get_task_time_entries(self, task_id: int, user_id: str) -> List:
+        """Get all time entries for a specific task"""
+        try:
+            _, _, time_repo = self._get_repositories()
+            return time_repo.get_time_entries_for_task(task_id, user_id)
+        except Exception as e:
+            self.logger.exception("Error getting time entries for task: %s", e)
+            return []
+
+    def delete_time_entry(self, entry_id: int, user_id: str) -> bool:
+        """Delete a specific time entry"""
+        try:
+            _, _, time_repo = self._get_repositories()
+            return time_repo.delete_time_entry(entry_id, user_id)
+        except Exception as e:
+            self.logger.exception("Error deleting time entry: %s", e)
+            return False
+
+    def update_time_entry(
+        self, entry_id: int, user_id: str, duration: Optional[float] = None,
+        description: Optional[str] = None
+    ) -> bool:
+        """Update a specific time entry"""
+        try:
+            _, _, time_repo = self._get_repositories()
+            return time_repo.update_time_entry(entry_id, user_id, duration, description)
+        except Exception as e:
+            self.logger.exception("Error updating time entry: %s", e)
+            return False
+
+    def update_task_category(self, task_id: int, user_id: str, category: str) -> bool:
+        """Update the category of a specific task"""
+        try:
+            task_repo, _, _ = self._get_repositories()
+            return task_repo.update_task_category(task_id, user_id, category)
+        except Exception as e:
+            self.logger.exception("Error updating task category: %s", e)
+            return False

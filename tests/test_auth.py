@@ -59,7 +59,7 @@ class TestUserRegistration:
         invalid_data = {
             "username": "testuser",
             "email": "invalid-email",
-            "password": "testpass123",
+            "password": "TestPassword123!",
         }
 
         response = test_client.post("/auth/register", json=invalid_data)
@@ -131,7 +131,7 @@ class TestUserLogin:
         """Test login with non-existent user"""
         response = test_client.post(
             "/auth/login",
-            json={"email_or_username": "nonexistent", "password": "password123"},
+            json={"email_or_username": "nonexistent", "password": "TestPassword123!"},
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED

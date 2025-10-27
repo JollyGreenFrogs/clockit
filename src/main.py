@@ -5,7 +5,6 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, validator
 
 # Handle imports that work from both project root and src directory
 try:
@@ -21,6 +20,14 @@ try:
     from .database.repositories import ConfigRepository, CurrencyRepository
     from .logging_config import configure_logging
     from .version import get_full_version_info, get_version_string
+    # Import Pydantic models from data_models
+    from .data_models.requests import (
+        TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate, TaskUpdate,
+        OnboardingData, RateConfig, CurrencyConfig, CategoryCreate
+    )
+    from .data_models.responses import (
+        OnboardingStatus, TaskResponse, CategoryResponse, MessageResponse
+    )
 except ImportError:
     # Fallback for when running from src directory
     from version import get_version_string, get_full_version_info
@@ -35,6 +42,15 @@ except ImportError:
     from auth.routes import router as auth_router
     from auth.dependencies import get_current_user
     from database.auth_models import User
+    # Import Pydantic models from data_models
+    from data_models.requests import (
+        TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate, TaskUpdate,
+        OnboardingData, RateConfig, CurrencyConfig, CategoryCreate
+    )
+    from data_models.responses import (
+        OnboardingStatus, TaskResponse, CategoryResponse, MessageResponse
+    )
+
 
 import logging
 
@@ -90,47 +106,6 @@ def initialize_application() -> None:
     logger.info("Application initialization complete")
 
 
-# Pydantic models for API requests
-class TimeEntry(BaseModel):
-    task_id: str
-    hours: float
-    date: str
-    description: Optional[str] = ""
-
-
-class TaskCreate(BaseModel):
-    name: str
-    description: Optional[str] = ""
-    parent_heading: Optional[str] = ""
-
-    @validator("name")
-    def validate_task_name(cls, v):
-        if not v or not v.strip():
-            raise ValueError("Task name cannot be empty")
-
-        # Check for excessive spaces
-        if "  " in v:  # Multiple consecutive spaces
-            raise ValueError("Task name cannot contain multiple consecutive spaces.")
-
-        if v != v.strip():
-            raise ValueError("Task name cannot start or end with spaces.")
-
-        # Ensure reasonable length
-        if len(v) > 100:
-            raise ValueError("Task name must be 100 characters or less.")
-
-        return v.strip()
-
-
-class RateConfig(BaseModel):
-    task_type: str
-    day_rate: float
-
-
-class CurrencyConfig(BaseModel):
-    currency: str  # Just the currency code
-
-
 # Load invoice columns config
 def load_invoice_columns():
     return invoice_manager.load_invoice_columns()
@@ -145,18 +120,51 @@ app = FastAPI(
     title="ClockIt - Time Tracker", version=get_full_version_info()["version"]
 )
 
-# Add CORS middleware to allow frontend connections
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Setup security middleware (HTTPS redirect and security headers)
+try:
+    from .middleware.security import setup_security_middleware
+    from .middleware.rate_limit import setup_rate_limiting, limiter
+    setup_security_middleware(app)
+    setup_rate_limiting(app)
+except ImportError:
+    from middleware.security import setup_security_middleware
+    from middleware.rate_limit import setup_rate_limiting, limiter
+    setup_security_middleware(app)
+    setup_rate_limiting(app)
+
+# Configure CORS based on environment
+if Config.ENVIRONMENT == "production":
+    # In production, use explicit origins from environment variable
+    cors_origins_str = os.getenv("CORS_ORIGINS", "")
+    allowed_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+    if not allowed_origins:
+        logger.warning("No CORS origins configured for production - CORS will be restrictive")
+        allowed_origins = []
+else:
+    # Development origins
+    allowed_origins = [
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Alternative React dev server
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
-    ],
+    ]
+
+# Add CORS middleware to allow frontend connections
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicit methods
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "X-Requested-With",
+    ],  # Explicit headers
+    expose_headers=["Content-Disposition"],  # For file downloads
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Initialize application on startup
@@ -164,6 +172,8 @@ initialize_application()
 
 # Include the authentication router
 app.include_router(auth_router, tags=["authentication"])
+
+# Onboarding endpoints will be added below
 
 
 # Version endpoint
@@ -215,7 +225,7 @@ async def create_task(task: TaskCreate, current_user: User = Depends(get_current
             name=task.name,
             user_id=str(current_user.id),
             description=task.description or "",
-            category=getattr(task, "category", ""),
+            category=task.category or "",  # Fixed: use category from TaskCreate
             task_type=getattr(task, "task_type", ""),
             priority=getattr(task, "priority", ""),
             hourly_rate=getattr(task, "hourly_rate", None),
@@ -244,9 +254,7 @@ async def add_time_entry(
 
         success = task_manager.add_time_entry_by_id(
             task_id=task_id,
-            duration=time_entry.hours,
-            description=time_entry.description or "",
-            date=time_entry.date,
+            time_entry=time_entry,
             user_id=str(current_user.id),
         )
 
@@ -303,6 +311,80 @@ async def delete_task(task_id: int, current_user: User = Depends(get_current_use
     except Exception as e:
         logger.exception("Error deleting task: %s", e)
         raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
+
+
+@app.get("/tasks/{task_id}/time-entries")
+async def get_task_time_entries(task_id: int, current_user: User = Depends(get_current_user)):
+    """Get all time entries for a specific task"""
+    try:
+        logger.info(f"Getting time entries for task ID: {task_id}")
+        entries = task_manager.get_task_time_entries(task_id, str(current_user.id))
+        return {"time_entries": entries}
+    except Exception as e:
+        logger.exception("Error getting time entries: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to get time entries: {str(e)}")
+
+
+@app.delete("/time-entries/{entry_id}")
+async def delete_time_entry(entry_id: int, current_user: User = Depends(get_current_user)):
+    """Delete a specific time entry"""
+    try:
+        logger.info(f"Deleting time entry ID: {entry_id}")
+        success = task_manager.delete_time_entry(entry_id, str(current_user.id))
+        if success:
+            return {"message": "Time entry deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Time entry not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error deleting time entry: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to delete time entry: {str(e)}")
+
+
+@app.put("/time-entries/{entry_id}")
+async def update_time_entry(
+    entry_id: int,
+    update_data: TimeEntryUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update a specific time entry"""
+    try:
+        logger.info(f"Updating time entry ID: {entry_id}")
+        success = task_manager.update_time_entry(
+            entry_id, str(current_user.id),
+            update_data.duration, update_data.description
+        )
+        if success:
+            return {"message": "Time entry updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Time entry not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error updating time entry: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to update time entry: {str(e)}")
+
+
+@app.put("/tasks/{task_id}/category")
+async def update_task_category(
+    task_id: int,
+    category_data: TaskCategoryUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update the category of a specific task"""
+    try:
+        logger.info(f"Updating category for task ID: {task_id}")
+        success = task_manager.update_task_category(task_id, str(current_user.id), category_data.category)
+        if success:
+            return {"message": "Task category updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Task not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error updating task category: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to update task category: {str(e)}")
 
 
 # Rate Configuration Endpoints
@@ -491,14 +573,9 @@ async def set_currency(
 # Categories Endpoints
 @app.get("/categories")
 async def get_categories(current_user: User = Depends(get_current_user)):
-    """Get list of all task types from rate configuration"""
+    """Get list of all categories for the user"""
     try:
-        db = next(get_db())
-        config_repo = ConfigRepository(db)
-        rates = config_repo.get_config("rates", str(current_user.id)) or {}
-
-        # Return sorted list of task types that have rates configured
-        categories = sorted(list(rates.keys()))
+        categories = task_manager.get_task_categories(str(current_user.id))
         return {"categories": categories}
     except Exception as e:
         logger.error(f"Failed to load categories: {e}")
@@ -510,7 +587,7 @@ async def get_categories(current_user: User = Depends(get_current_user)):
 async def generate_invoice(current_user: User = Depends(get_current_user)):
     """Generate invoice from non-exported tasks"""
     try:
-        result = invoice_manager.generate_invoice(include_exported=False)
+        result = invoice_manager.generate_invoice(include_exported=False, user_id=str(current_user.id))
 
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])
@@ -519,15 +596,18 @@ async def generate_invoice(current_user: User = Depends(get_current_user)):
         if invoice_manager.export_invoice(result):
             # Create CSV content manually since create_csv_export doesn't exist
             csv_lines = []
-            csv_lines.append("Description,Hours,Rate,Amount")
+            csv_lines.append("Description,Hours,Hour Rate,Amount")
 
+            total_hours = 0
             for item in result.get("items", []):
+                hours = item.get('total_hours', 0)
+                total_hours += hours
                 csv_lines.append(
-                    f"\"{item.get('description', 'N/A')}\",{item.get('hours', 0):.2f},{item.get('rate', 0):.2f},{item.get('amount', 0):.2f}"
+                    f"\"{item.get('task', 'N/A')}\",{hours:.2f},{item.get('hour_rate', 'N/A')},{item.get('amount', 'N/A')}"
                 )
 
             csv_lines.append(
-                f"Total,,{result.get('total_hours', 0):.2f},{result.get('total_amount', 0):.2f}"
+                f"Total,,{total_hours:.2f},{result.get('total', 'N/A')}"
             )
             csv_content = "\n".join(csv_lines)
 
@@ -557,7 +637,7 @@ async def generate_invoice(current_user: User = Depends(get_current_user)):
 async def preview_invoice(current_user: User = Depends(get_current_user)):
     """Preview invoice without marking tasks as exported"""
     try:
-        result = invoice_manager.generate_invoice(include_exported=False)
+        result = invoice_manager.generate_invoice(include_exported=False, user_id=str(current_user.id))
 
         if "error" in result:
             return {"preview": result["error"], "status": "no_data"}
@@ -569,16 +649,18 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
 
         if "items" in result:
             preview_lines.append("ITEMS:")
+            total_hours = 0
             for item in result["items"]:
+                hours = item.get('total_hours', 0)
+                total_hours += hours
                 preview_lines.append(
-                    f"• {item.get('description', 'N/A')}: {item.get('hours', 0):.2f}h @ {item.get('rate', 0):.2f}/day = {item.get('amount', 0):.2f}"
+                    f"• {item.get('task', 'N/A')}: {hours:.2f}h @ {item.get('hour_rate', 'N/A')}/hr = {item.get('amount', 'N/A')}"
                 )
 
             preview_lines.append("")
-            preview_lines.append(
-                f"TOTAL: {result.get('currency_symbol', '$')}{result.get('total_amount', 0):.2f}"
-            )
-            preview_lines.append(f"Total Hours: {result.get('total_hours', 0):.2f}")
+            total_amount = result.get('total', '0.00')
+            preview_lines.append(f"TOTAL: {total_amount}")
+            preview_lines.append(f"Total Hours: {total_hours:.2f}")
 
         preview_text = "\n".join(preview_lines)
 
@@ -586,6 +668,68 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
     except Exception as e:
         logger.exception("Error generating invoice preview: %s", e)
         return {"preview": f"Error generating preview: {str(e)}", "status": "error"}
+
+
+# Onboarding Endpoints
+@app.get("/onboarding/status")
+async def get_onboarding_status(current_user: User = Depends(get_current_user)):
+    """Get user's onboarding status"""
+    try:
+        return OnboardingStatus(
+            onboarding_completed=bool(current_user.onboarding_completed),
+            default_category=current_user.default_category,
+            needs_onboarding=not bool(current_user.onboarding_completed)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting onboarding status: {str(e)}")
+
+
+@app.post("/onboarding/complete")
+async def complete_onboarding(
+    onboarding_data: OnboardingData,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Complete user onboarding"""
+    try:
+        # Update user's onboarding status and default category
+        from auth.services import AuthService
+        auth_service = AuthService(db)
+        success = auth_service.complete_user_onboarding(
+            user_id=str(current_user.id),
+            default_category=onboarding_data.default_category
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to complete onboarding")
+
+        # Create initial categories if provided
+        for category_name in onboarding_data.categories:
+            if category_name.strip():
+                task_manager.create_category(
+                    name=category_name.strip(),
+                    description="Category created during onboarding",
+                    color="#007bff"  # Default blue color
+                )
+
+        return {
+            "message": "Onboarding completed successfully",
+            "default_category": onboarding_data.default_category,
+            "categories_created": len(onboarding_data.categories)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error completing onboarding: {str(e)}")
+
+
+@app.get("/onboarding/check")
+async def check_onboarding_required(current_user: User = Depends(get_current_user)):
+    """Check if user needs onboarding (used by frontend for routing)"""
+    return {
+        "requires_onboarding": not bool(current_user.onboarding_completed),
+        "user_id": str(current_user.id),
+        "username": current_user.username
+    }
 
 
 # System Control Endpoints

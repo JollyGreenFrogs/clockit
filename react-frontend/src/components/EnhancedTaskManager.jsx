@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 function EnhancedTaskManager({ onTasksChange }) {
   const [tasks, setTasks] = useState({})
@@ -23,7 +23,10 @@ function EnhancedTaskManager({ onTasksChange }) {
       const response = await authenticatedFetch('/tasks')
       if (response.ok) {
         const data = await response.json()
-        setTasks(data.tasks || [])
+        // Convert object format {"1": {...}, "2": {...}} to array [...] 
+        const tasksData = data.tasks || {}
+        const tasksArray = Object.values(tasksData)
+        setTasks(tasksArray)
       }
     } catch (error) {
       console.error('Error loading tasks:', error)
@@ -32,10 +35,12 @@ function EnhancedTaskManager({ onTasksChange }) {
 
   const loadCategories = async () => {
     try {
-      const response = await authenticatedFetch('/categories')
+      const response = await authenticatedFetch('/rates')
       if (response.ok) {
         const data = await response.json()
-        setCategories(data.categories || [])
+        // Convert rates object to categories array
+        const categoriesArray = Object.keys(data)
+        setCategories(categoriesArray)
       }
     } catch (error) {
       console.error('Error loading categories:', error)
@@ -68,6 +73,11 @@ function EnhancedTaskManager({ onTasksChange }) {
     const validationError = validateTaskName(taskName)
     if (validationError) {
       setResult(validationError)
+      return
+    }
+
+    if (!selectedCategory.trim()) {
+      setResult('Please select a category for the task.')
       return
     }
 
@@ -105,11 +115,12 @@ function EnhancedTaskManager({ onTasksChange }) {
     if (!newCategoryName.trim()) return
 
     try {
-      const response = await authenticatedFetch('/categories', {
+      const response = await authenticatedFetch('/rates', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newCategoryName,
-          description: ''
+          task_type: newCategoryName,
+          day_rate: 0 // Default rate, user can set this later in rate configuration
         })
       })
 
@@ -155,6 +166,11 @@ function EnhancedTaskManager({ onTasksChange }) {
   }
 
   const formatTime = (hours) => {
+    // Handle invalid input
+    if (typeof hours !== 'number' || isNaN(hours) || hours < 0) {
+      return '00:00:00'
+    }
+    
     const totalHours = Math.floor(hours)
     const minutes = Math.floor((hours % 1) * 60)
     const seconds = Math.floor(((hours % 1) * 60 % 1) * 60)
@@ -195,7 +211,7 @@ function EnhancedTaskManager({ onTasksChange }) {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 style={{ flex: 1 }}
               >
-                <option value="">Select a category...</option>
+                <option value="">Select a category... (Required)</option>
                 {categories.map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
