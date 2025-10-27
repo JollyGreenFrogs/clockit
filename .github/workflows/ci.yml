@@ -29,6 +29,7 @@ jobs:
           DEV_MODE: sqlite
           ENVIRONMENT: test
           SECRET_KEY: test-secret-key-for-ci-only-32-chars-long
+          ENABLE_RATE_LIMITING: false
         run: |
           . .venv/bin/activate
           PYTHONPATH=${{ github.workspace }} .venv/bin/pytest -q --tb=no -x
@@ -113,6 +114,7 @@ jobs:
           DEV_MODE: sqlite
           ENVIRONMENT: test
           SECRET_KEY: test-secret-key-for-ci-only-32-chars-long
+          ENABLE_RATE_LIMITING: false
           HOST: "0.0.0.0"
           PORT: 8001
 
