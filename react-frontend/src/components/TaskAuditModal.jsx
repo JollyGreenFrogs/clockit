@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../hooks/useAuth'
 import './TaskAuditModal.css'
 
 function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
@@ -17,9 +17,10 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
       loadCategories()
       setSelectedCategory(task.category || '')
     }
-  }, [isOpen, task])
+  }, [isOpen, task, loadTimeEntries, loadCategories])
 
-  const loadTimeEntries = async () => {
+  const loadTimeEntries = useCallback(async () => {
+    if (!task) return
     try {
       setLoading(true)
       const response = await authenticatedFetch(`/tasks/${task.id}/time-entries`)
@@ -35,9 +36,9 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [task, authenticatedFetch])
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       const response = await authenticatedFetch('/rates')
       if (response.ok) {
@@ -53,7 +54,7 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
     } catch (error) {
       console.error('Error loading categories:', error)
     }
-  }
+  }, [authenticatedFetch])
 
   const updateTaskCategory = async () => {
     try {

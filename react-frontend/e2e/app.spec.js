@@ -47,7 +47,7 @@ test.describe('ClockIt App E2E Tests', () => {
     
     // Try to find and fill login form
     const emailField = page.locator('input[type="email"], input[name="email"]').first();
-    const passwordField = page.locator('input[type="password"], input[name="password"]').first();
+    const _passwordField = page.locator('input[type="password"], input[name="password"]').first();
     const loginButton = page.locator('button:has-text("Login"), button:has-text("Sign In"), button[type="submit"]').first();
     
     if (await emailField.isVisible()) {

@@ -1,14 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const AuthContext = createContext();
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+import React, { useState, useEffect } from 'react';
+import { AuthContext } from './AuthContextDefinition';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -109,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error(errorData.detail || 'Registration failed');
       }
 
-      const userData = await response.json();
+      await response.json();
       
       // After successful registration, automatically log in
       return await login(email, password);

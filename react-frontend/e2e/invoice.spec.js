@@ -82,7 +82,7 @@ test.describe('Invoice Generation E2E Tests', () => {
         const download = await downloadPromise;
         // If download succeeds, check filename
         expect(download.suggestedFilename()).toMatch(/invoice.*\.csv$/i);
-      } catch (error) {
+      } catch {
         // If no download, check for error message
         const errorMessage = page.locator('.alert-error, .error, .message').first();
         await expect(errorMessage).toBeVisible();
@@ -136,14 +136,14 @@ test.describe('Invoice Generation E2E Tests', () => {
   test('should make authenticated requests', async ({ page }) => {
     await page.goto('/');
     
-    let authHeaderFound = false;
+    let _authHeaderFound = false;
     
     // Intercept requests to check for authentication
     page.on('request', (request) => {
       if (request.url().includes('/invoice/')) {
         const headers = request.headers();
         if (headers.authorization || headers.Authorization) {
-          authHeaderFound = true;
+          _authHeaderFound = true;
         }
       }
     });

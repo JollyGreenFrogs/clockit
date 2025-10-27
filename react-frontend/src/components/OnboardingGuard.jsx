@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import Onboarding from '../components/Onboarding'
 import Loading from '../components/Loading'
 
 function OnboardingGuard({ children }) {
-  const { user, isAuthenticated, checkOnboardingStatus } = useAuth()
+  const { isAuthenticated, checkOnboardingStatus } = useAuth()
   const [onboardingStatus, setOnboardingStatus] = useState(null)
   const [loading, setLoading] = useState(true)
 
