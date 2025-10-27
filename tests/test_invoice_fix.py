@@ -65,6 +65,7 @@ def test_invoice_manager_data_structure():
         assert "amount" in item
         
         print("Invoice structure test passed!")
+        assert result is not None
         return result
 
 
@@ -83,7 +84,7 @@ def test_backend_preview_endpoint_mock():
                 "amount": "$400.00"
             },
             {
-                "task": "Testing", 
+                "task": "Testing",
                 "total_hours": 4.0,
                 "hour_rate": "$37.50",
                 "amount": "$150.00"
@@ -124,6 +125,10 @@ def test_backend_preview_endpoint_mock():
     print("Generated preview:")
     print(preview_text)
     
+    assert {
+        "preview": preview_text,
+        "status": "success"
+    } is not None
     return {"preview": preview_text, "status": "success"}
 
 

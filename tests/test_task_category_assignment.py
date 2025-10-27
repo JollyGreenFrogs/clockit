@@ -5,8 +5,10 @@ This test verifies the fix for the issue where tasks created with a category
 were not properly storing the category, causing invoice generation to fail.
 """
 
+import pytest
 import requests
 import json
+import os
 from typing import Dict
 
 
@@ -55,6 +57,14 @@ def make_authenticated_request(base_url: str, endpoint: str, token: str, method:
     return response
 
 
+# Skip integration tests in CI environment
+skip_in_ci = pytest.mark.skipif(
+    os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Integration test requires live server - skipped in CI"
+)
+
+
+@skip_in_ci
 class TestTaskCategoryAssignment:
     """Test suite for task category assignment functionality"""
     
