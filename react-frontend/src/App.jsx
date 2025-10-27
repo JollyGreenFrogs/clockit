@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthProvider } from './contexts/AuthContext'
+import { useAuth } from './hooks/useAuth'
 import Navigation from './components/Navigation'
 import Dashboard from './components/Dashboard'
 import EnhancedStopwatch from './components/EnhancedStopwatch'

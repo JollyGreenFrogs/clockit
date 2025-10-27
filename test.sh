@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Test runner script for ClockIt
-# Runs both backend and frontend tests
+# Runs both backend and frontend tests with proper Python path setup
 
 set -e
 

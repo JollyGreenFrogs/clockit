@@ -13,7 +13,7 @@ class TestRequestModels:
 
     def test_time_entry_model_validation(self):
         """Test TimeEntry model with comprehensive validation"""
-        from src.data_models.requests import TimeEntry
+        from data_models.requests import TimeEntry
         
         # Test valid time entry
         time_entry = TimeEntry(
@@ -37,7 +37,7 @@ class TestRequestModels:
 
     def test_time_entry_xss_protection(self):
         """Test that TimeEntry sanitizes potentially dangerous input"""
-        from src.data_models.requests import TimeEntry
+        from data_models.requests import TimeEntry
         
         # Test XSS attempt in description
         time_entry = TimeEntry(
@@ -50,7 +50,7 @@ class TestRequestModels:
 
     def test_task_create_comprehensive_validation(self):
         """Test TaskCreate with comprehensive validation and sanitization"""
-        from src.data_models.requests import TaskCreate
+        from data_models.requests import TaskCreate
         
         # Test valid task creation
         task = TaskCreate(
@@ -85,7 +85,7 @@ class TestRequestModels:
 
     def test_category_create_validation(self):
         """Test CategoryCreate with validation"""
-        from src.data_models.requests import CategoryCreate
+        from data_models.requests import CategoryCreate
         
         # Test valid category
         category = CategoryCreate(
@@ -103,7 +103,7 @@ class TestRequestModels:
 
     def test_onboarding_data_validation(self):
         """Test OnboardingData with list validation and sanitization"""
-        from src.data_models.requests import OnboardingData
+        from data_models.requests import OnboardingData
         
         # Test valid onboarding data
         onboarding = OnboardingData(
@@ -124,7 +124,7 @@ class TestRequestModels:
 
     def test_rate_config_validation(self):
         """Test RateConfig with business logic validation"""
-        from src.data_models.requests import RateConfig
+        from data_models.requests import RateConfig
         
         # Test valid rate config
         rate = RateConfig(task_type="Development", day_rate=400.50)
@@ -143,7 +143,7 @@ class TestRequestModels:
 
     def test_currency_config_validation(self):
         """Test CurrencyConfig with strict format validation"""
-        from src.data_models.requests import CurrencyConfig
+        from data_models.requests import CurrencyConfig
         
         # Test valid currency
         currency = CurrencyConfig(currency="USD")
@@ -169,7 +169,7 @@ class TestResponseModels:
 
     def test_onboarding_status_response(self):
         """Test OnboardingStatus response model"""
-        from src.data_models.responses import OnboardingStatus
+        from data_models.responses import OnboardingStatus
         
         status = OnboardingStatus(
             onboarding_completed=True,
@@ -182,7 +182,7 @@ class TestResponseModels:
 
     def test_task_response_model(self):
         """Test TaskResponse model structure"""
-        from src.data_models.responses import TaskResponse
+        from data_models.responses import TaskResponse
         
         task_response = TaskResponse(
             id=1,
@@ -200,7 +200,7 @@ class TestResponseModels:
 
     def test_success_and_error_responses(self):
         """Test generic API response models"""
-        from src.data_models.responses import SuccessResponse, ErrorResponse
+        from data_models.responses import SuccessResponse, ErrorResponse
         
         success = SuccessResponse(
             message="Operation completed successfully",
@@ -223,14 +223,14 @@ class TestMainAppIntegration:
     def test_main_app_imports_comprehensive_models(self):
         """Test that main.py imports all new models correctly"""
         try:
-            from src.main import app
+            from main import app
             print("✅ main.py successfully imported with comprehensive data models")
         except ImportError as e:
             pytest.fail(f"main.py failed to import comprehensive data models: {e}")
 
     def test_app_endpoints_accessible(self):
         """Test that app endpoints are accessible with new models"""
-        from src.main import app
+        from main import app
         from fastapi.testclient import TestClient
         
         client = TestClient(app)
@@ -248,7 +248,7 @@ class TestCybersecurityFeatures:
 
     def test_input_length_limits(self):
         """Test that all models enforce reasonable length limits"""
-        from src.data_models.requests import TaskCreate, TimeEntry
+        from data_models.requests import TaskCreate, TimeEntry
         
         # Test task name length limit
         with pytest.raises(ValidationError):
@@ -264,7 +264,7 @@ class TestCybersecurityFeatures:
 
     def test_numerical_bounds_validation(self):
         """Test that numerical inputs have reasonable bounds"""
-        from src.data_models.requests import TimeEntry, RateConfig
+        from data_models.requests import TimeEntry, RateConfig
         
         # Hours should be bounded
         with pytest.raises(ValidationError):
@@ -276,7 +276,7 @@ class TestCybersecurityFeatures:
 
     def test_string_sanitization(self):
         """Test that string fields are properly sanitized"""
-        from src.data_models.requests import TaskCreate
+        from data_models.requests import TaskCreate
         
         # Test with potentially dangerous input - validation should reject it
         with pytest.raises(ValidationError):

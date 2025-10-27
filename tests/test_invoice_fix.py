@@ -10,8 +10,8 @@ from pathlib import Path
 # Test the invoice manager directly
 def test_invoice_manager_data_structure():
     """Test that invoice manager returns expected data structure"""
-    from src.business.invoice_manager import InvoiceManager
-    from src.business.task_manager import TaskManager
+    from business.invoice_manager import InvoiceManager
+    from business.task_manager import TaskManager
     
     # Create a mock data directory
     data_dir = Path("/tmp/test_invoice")

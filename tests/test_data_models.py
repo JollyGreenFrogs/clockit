@@ -12,7 +12,7 @@ def test_main_app_imports_new_models():
     """Test that main.py can import and use the new data models"""
     try:
         # This will fail if main.py can't import our new models
-        from src.main import app
+        from main import app
         print("✅ main.py successfully imported with new data models")
     except ImportError as e:
         pytest.fail(f"main.py failed to import new data models: {e}")
@@ -20,7 +20,7 @@ def test_main_app_imports_new_models():
 
 def test_fastapi_endpoints_use_new_models():
     """Test that FastAPI endpoints work with the refactored models"""
-    from src.main import app
+    from main import app
     
     client = TestClient(app)
     
@@ -40,8 +40,8 @@ def test_task_manager_integration_with_new_time_entry():
     Test that TaskManager works with the new TimeEntry model structure
     This is the CRITICAL test - verifying our datetime refactoring works
     """
-    from src.business.task_manager import TaskManager
-    from src.data_models.requests import TimeEntry
+    from business.task_manager import TaskManager
+    from data_models.requests import TimeEntry
     
     # Create a TaskManager instance
     task_manager = TaskManager()
@@ -82,7 +82,7 @@ def test_time_entry_datetime_validation():
     Test that the datetime field actually provides validation benefits
     This is WHY we made the change from string to datetime
     """
-    from src.data_models.requests import TimeEntry
+    from data_models.requests import TimeEntry
     from pydantic import ValidationError
     
     # Valid datetime should work
@@ -117,15 +117,15 @@ def test_pydantic_models_separation():
     Test that we successfully separated request and response models
     """
     # Test imports work correctly
-    from src.data_models.requests import (
+    from data_models.requests import (
         TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate,
         OnboardingData, RateConfig, CurrencyConfig
     )
-    from src.data_models.responses import OnboardingStatus
+    from data_models.responses import OnboardingStatus
     
     # Verify OnboardingStatus is NOT in requests (it's a response model)
     try:
-        from src.data_models.requests import OnboardingStatus
+        from data_models.requests import OnboardingStatus
         pytest.fail("OnboardingStatus should be in responses, not requests!")
     except ImportError:
         pass  # This is expected
