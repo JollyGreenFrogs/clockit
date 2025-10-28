@@ -112,3 +112,4 @@ secrets/
 *.pem
 *.key
 *.crt
+.env.prod

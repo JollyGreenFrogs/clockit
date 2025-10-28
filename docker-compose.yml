@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Frontend - React served by Nginx
   clockit-frontend:
@@ -10,6 +8,8 @@ services:
       - "3000:80"
     depends_on:
       - clockit-backend
+    networks:
+      - clockit-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
@@ -38,6 +38,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
     depends_on:
       - clockit-db
+    networks:
+      - clockit-network
     volumes:
       - clockit_data:/app/data
       - clockit_logs:/app/logs
@@ -58,6 +60,8 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - clockit-network
     # Port exposure removed for security - use internal networking only
     # To access database for debugging, use: docker exec -it clockit-db psql -U clockit
     healthcheck:
@@ -74,3 +78,11 @@ volumes:
     driver: local
   postgres_data:
     driver: local
+
+networks:
+  clockit-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

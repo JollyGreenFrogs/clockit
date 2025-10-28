@@ -62,6 +62,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     is_active: bool
     subscription_tier: str
+    onboarding_completed: bool
     created_at: str
 
     class Config:
@@ -107,6 +108,7 @@ async def register(
             full_name=user.full_name,
             is_active=user.is_active,
             subscription_tier=user.subscription_tier,
+            onboarding_completed=bool(user.onboarding_completed),
             created_at=user.created_at.isoformat(),
         )
     except HTTPException:
@@ -155,6 +157,7 @@ async def login(
             full_name=user.full_name,
             is_active=user.is_active,
             subscription_tier=user.subscription_tier,
+            onboarding_completed=bool(user.onboarding_completed),
             created_at=user.created_at.isoformat(),
         ),
     )
@@ -197,6 +200,7 @@ async def refresh_token(
             full_name=user.full_name,
             is_active=user.is_active,
             subscription_tier=user.subscription_tier,
+            onboarding_completed=bool(user.onboarding_completed),
             created_at=user.created_at.isoformat(),
         ),
     )
@@ -212,6 +216,7 @@ async def get_current_user_info(current_user=Depends(get_current_user)):
         full_name=current_user.full_name,
         is_active=current_user.is_active,
         subscription_tier=current_user.subscription_tier,
+        onboarding_completed=bool(current_user.onboarding_completed),
         created_at=current_user.created_at.isoformat(),
     )
 
