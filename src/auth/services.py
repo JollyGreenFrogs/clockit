@@ -187,10 +187,14 @@ class AuthService:
         self.db.refresh(user)
 
         # Create default categories for new user
-        self._create_default_categories(str(user.id))
+        # REMOVED: Don't create default categories with 0 rates
+        # Users should create their own categories during onboarding
+        # self._create_default_categories(str(user.id))
 
         # Set default currency for new user
-        self._set_default_currency(str(user.id))
+        # REMOVED: Don't automatically set USD as default currency
+        # Users should choose their currency during onboarding
+        # self._set_default_currency(str(user.id))
 
         # Log user creation
         self._log_action(str(user.id), "user_created", "user", str(user.id))
@@ -335,6 +339,80 @@ class AuthService:
         # For now, we just log the action
         self._log_action(user_id, "logout", "user", user_id)
 
+    def change_password(self, user_id: str, current_password: str, new_password: str) -> bool:
+        """Change user password after verifying current password"""
+        try:
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+
+            # Verify current password
+            if not user.check_password(current_password):
+                self._log_action(
+                    user_id,
+                    "password_change_failed",
+                    "user",
+                    user_id,
+                    details="Invalid current password"
+                )
+                return False
+
+            # Validate new password strength
+            is_valid, error_message = validate_password_strength(new_password)
+            if not is_valid:
+                self._log_action(
+                    user_id,
+                    "password_change_failed",
+                    "user",
+                    user_id,
+                    details=f"Password validation failed: {error_message}"
+                )
+                raise HTTPException(status_code=400, detail=error_message)
+
+            # Create new password hash
+            salt = bcrypt.gensalt()
+            new_password_hash = bcrypt.hashpw(new_password.encode("utf-8"), salt).decode("utf-8")
+
+            # Update user with new password and reset security fields
+            from sqlalchemy import update
+            self.db.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(
+                    hashed_password=new_password_hash,
+                    updated_at=datetime.utcnow(),
+                    failed_login_attempts=0,
+                    account_locked_until=None,
+                    password_reset_token=None,
+                    password_reset_expires=None
+                )
+            )
+            
+            self.db.commit()
+            
+            self._log_action(
+                user_id,
+                "password_changed",
+                "user",
+                user_id,
+                details="Password successfully changed"
+            )
+            
+            return True
+        except HTTPException:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            self.db.rollback()
+            self._log_action(
+                user_id,
+                "password_change_error",
+                "user",
+                user_id,
+                details=f"Error changing password: {str(e)}"
+            )
+            return False
+
     def _create_default_categories(self, user_id: str):
         """Create default categories for new user"""
         default_categories = [
@@ -408,8 +486,8 @@ class AuthService:
         action: str,
         resource_type: str,
         resource_id: str,
-        details: str = None,
-        ip_address: str = None,
+        details: Optional[str] = None,
+        ip_address: Optional[str] = None,
     ):
         """Log action for audit trail"""
         log = AuditLog(
@@ -426,16 +504,21 @@ class AuthService:
     def complete_user_onboarding(self, user_id: str, default_category: str) -> bool:
         """Complete user onboarding by setting default category and onboarding status"""
         try:
-            user = self.db.query(User).filter(User.id == user_id).first()
-            if not user:
-                return False
-
-            user.onboarding_completed = True
-            user.default_category = default_category
-            user.updated_at = datetime.utcnow()
+            from sqlalchemy import update
+            
+            # Update user with onboarding completion
+            result = self.db.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(
+                    onboarding_completed=True,
+                    default_category=default_category,
+                    updated_at=datetime.utcnow()
+                )
+            )
 
             self.db.commit()
-            return True
+            return result.rowcount > 0
         except Exception:
             self.db.rollback()
             return False
