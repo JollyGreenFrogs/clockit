@@ -36,7 +36,7 @@ def test_database_url():
     else:
         # Use PostgreSQL for local testing to match production
         return (
-            "postgresql://clockit_user:tTWkfV8JEtx%5E3u@localhost:5432/clockit_test_db"
+            "postgresql://clockit:clockit_dev_pass@localhost:5432/clockit_test_db"
         )
 
 
@@ -66,7 +66,7 @@ def test_engine(test_database_url):
         # Cleanup test database
         try:
             Base.metadata.drop_all(bind=engine)
-        except:
+        except Exception:
             pass
 
 

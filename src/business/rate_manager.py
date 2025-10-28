@@ -32,8 +32,8 @@ class RateManager:
             with open(self.rates_file, "w") as f:
                 json.dump(rates, f, indent=2)
             return True
-        except Exception as e:
-            print(f"Error saving rates: {e}")
+        except Exception:
+            # Silent error handling for production
             return False
 
     def set_rate(self, task_type: str, day_rate: float) -> bool:

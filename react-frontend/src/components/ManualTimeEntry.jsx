@@ -40,7 +40,6 @@ function ManualTimeEntry({ tasks, onTimeAdded }) {
         setTimeout(() => setResult(''), 5000)
       }
     } catch (error) {
-      console.error('Error adding time entry:', error)
       setResult('Error adding time entry')
       setTimeout(() => setResult(''), 3000)
     }

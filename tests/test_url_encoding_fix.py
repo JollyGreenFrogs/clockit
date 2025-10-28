@@ -160,7 +160,7 @@ class TestTaskIDBasedAPI:
         mock_add_time.assert_called_once()
         call_args = mock_add_time.call_args
         assert call_args[1]["task_id"] == task_id
-        # Check the time_entry object hours attribute  
+        # Check the time_entry object hours attribute
         time_entry_obj = call_args[1]["time_entry"]
         assert time_entry_obj.hours == 2.5
 

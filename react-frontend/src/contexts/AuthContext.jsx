@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
             setToken(null);
           }
         } catch (error) {
-          console.error('Error validating token:', error);
+          // Silent token validation error handling
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           setToken(null);
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      // Silent login error handling
       return { success: false, error: error.message };
     }
   };
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }) => {
       // After successful registration, automatically log in
       return await login(email, password);
     } catch (error) {
-      console.error('Registration error:', error);
+      // Silent registration error handling
       return { success: false, error: error.message };
     }
   };
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      // Silent logout error handling
     } finally {
       // Clear local state regardless of API call success
       localStorage.removeItem('access_token');
@@ -163,7 +163,7 @@ export const AuthProvider = ({ children }) => {
       setToken(data.access_token);
       return data.access_token;
     } catch (error) {
-      console.error('Token refresh error:', error);
+      // Silent token refresh error handling
       logout();
       return null;
     }
@@ -222,7 +222,7 @@ export const AuthProvider = ({ children }) => {
       }
       return false;
     } catch (error) {
-      console.error('Error refreshing user data:', error);
+      // Silent user data refresh error handling
       return false;
     }
   };
@@ -233,11 +233,17 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authenticatedFetch('/onboarding/status');
       if (response.ok) {
-        return await response.json();
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return await response.json();
+        } else {
+          // Silent non-JSON response handling
+          return null;
+        }
       }
       return null;
     } catch (error) {
-      console.error('Error checking onboarding status:', error);
+      // Silent onboarding status error handling
       return null;
     }
   };

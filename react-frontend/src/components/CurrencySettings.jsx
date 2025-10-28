@@ -20,7 +20,6 @@ function CurrencySettings() {
       const data = await response.json()
       setCurrencies(data.currencies || [])
     } catch (error) {
-      console.error('Error loading currencies:', error)
     }
   }
 
@@ -33,7 +32,6 @@ function CurrencySettings() {
       setCurrentCurrency(currencyCode)
       setSelectedCurrency(currencyCode)
     } catch (error) {
-      console.error('Error loading current currency:', error)
     }
   }
 
@@ -59,7 +57,6 @@ function CurrencySettings() {
         setResult('Error updating currency')
       }
     } catch (error) {
-      console.error('Error setting currency:', error)
       setResult('Error updating currency')
     } finally {
       setLoading(false)

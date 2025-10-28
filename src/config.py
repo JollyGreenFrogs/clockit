@@ -66,7 +66,9 @@ class Config:
     )
 
     # Rate limiting
-    ENABLE_RATE_LIMITING = os.environ.get("ENABLE_RATE_LIMITING", "true").lower() == "true"
+    ENABLE_RATE_LIMITING = (
+        os.environ.get("ENABLE_RATE_LIMITING", "true").lower() == "true"
+    )
 
     # Cloud-specific settings
     CLOUD_PROVIDER = os.environ.get("CLOUD_PROVIDER")  # 'aws', 'gcp', 'azure', None
@@ -105,7 +107,9 @@ class Config:
                 not cls.SECRET_KEY
                 or cls.SECRET_KEY == "test-secret-key-for-development-only"
             ):
-                logger.error("SECRET_KEY must be set in production and cannot use default value")
+                logger.error(
+                    "SECRET_KEY must be set in production and cannot use default value"
+                )
                 valid = False
             elif len(cls.SECRET_KEY) < 32:
                 logger.error("SECRET_KEY must be at least 32 characters long")
@@ -117,7 +121,9 @@ class Config:
         else:
             # Development environment warnings
             if cls.SECRET_KEY == "test-secret-key-for-development-only":
-                logger.warning("Using default SECRET_KEY for development only - DO NOT use in production")
+                logger.warning(
+                    "Using default SECRET_KEY for development only - DO NOT use in production"
+                )
             elif not cls.SECRET_KEY or len(cls.SECRET_KEY) < 32:
                 logger.warning("SECRET_KEY should be at least 32 characters long")
 

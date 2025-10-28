@@ -1,18 +1,21 @@
 """
 Rate limiting middleware for API protection
 """
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from fastapi import Request
+
 import logging
+
+from fastapi import Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
 # Check if rate limiting should be enabled
 try:
     from config import Config
-    RATE_LIMITING_ENABLED = getattr(Config, 'ENABLE_RATE_LIMITING', True)
+
+    RATE_LIMITING_ENABLED = getattr(Config, "ENABLE_RATE_LIMITING", True)
 except ImportError:
     RATE_LIMITING_ENABLED = True
 
@@ -32,9 +35,9 @@ def get_user_or_ip(request: Request) -> str:
     if auth_header and auth_header.startswith("Bearer "):
         try:
             # Import here to avoid circular dependencies
-            from database.connection import get_db
             from auth.services import AuthService
-            
+            from database.connection import get_db
+
             token = auth_header.split(" ")[1]
             db = next(get_db())
             auth_service = AuthService(db)
@@ -44,7 +47,7 @@ def get_user_or_ip(request: Request) -> str:
         except Exception:
             # If token verification fails, fall back to IP
             pass
-    
+
     # Fall back to IP address
     return f"ip:{get_remote_address(request)}"
 
@@ -60,11 +63,11 @@ def setup_rate_limiting(app):
         from config import Config
     except ImportError:
         from ..config import Config
-    
+
     if Config.ENVIRONMENT == "test":
         logger.info("Rate limiting disabled in test environment")
         return
-    
+
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     logger.info("Rate limiting enabled")

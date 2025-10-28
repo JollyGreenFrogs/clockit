@@ -17,7 +17,7 @@ def test_default_config_values():
     assert Config.ENVIRONMENT == expected_env
     assert Config.HOST == "0.0.0.0"
     assert Config.PORT == 8000
-    assert Config.DATABASE_TYPE == "file"
+    assert Config.DATABASE_TYPE == "postgres"
     assert Config.LOG_LEVEL == "INFO"
 
 

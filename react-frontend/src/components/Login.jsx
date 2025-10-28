@@ -13,7 +13,6 @@ const Login = ({ onSwitchToRegister }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log('Login field changed:', name, value); // Debug logging
     setFormData({
       ...formData,
       [name]: value,

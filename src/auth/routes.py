@@ -20,7 +20,8 @@ from database.connection import get_db
 
 # Import rate limiter
 try:
-    from middleware.rate_limit import limiter, RATE_LIMITING_ENABLED
+    from middleware.rate_limit import RATE_LIMITING_ENABLED, limiter
+
     # Create a conditional decorator - disable rate limiting for tests or when explicitly disabled
     if not RATE_LIMITING_ENABLED:
         # Dummy decorator for tests or when rate limiting is disabled
@@ -28,16 +29,20 @@ try:
             def limit(self, limit_string):
                 def decorator(func):
                     return func
+
                 return decorator
-        limiter = DummyLimiter()
+
+        limiter = DummyLimiter()  # noqa: F811
 except ImportError:
     # If rate limiter not available, create a dummy decorator
     class DummyLimiter:
         def limit(self, limit_string):
             def decorator(func):
                 return func
+
             return decorator
-    limiter = DummyLimiter()
+
+    limiter = DummyLimiter()  # noqa: F811
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -157,7 +162,9 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 @limiter.limit("10/minute")  # Allow reasonable token refresh rate
-async def refresh_token(refresh_request: RefreshRequest, request: Request, db: Session = Depends(get_db)):
+async def refresh_token(
+    refresh_request: RefreshRequest, request: Request, db: Session = Depends(get_db)
+):
     """Refresh access token using refresh token"""
     auth_service = AuthService(db)
 

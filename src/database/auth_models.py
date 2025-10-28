@@ -32,7 +32,9 @@ class User(Base):
 
     # Onboarding
     onboarding_completed = Column(Boolean, default=False)
-    default_category = Column(String(100), nullable=True)  # User's default category for tasks
+    default_category = Column(
+        String(100), nullable=True
+    )  # User's default category for tasks
 
     # Security & tracking
     last_login = Column(DateTime, nullable=True)

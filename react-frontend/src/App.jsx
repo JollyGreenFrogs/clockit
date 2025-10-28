@@ -13,6 +13,7 @@ import AuthPage from './components/AuthPage'
 import Loading from './components/Loading'
 import UserMenu from './components/UserMenu'
 import OnboardingGuard from './components/OnboardingGuard'
+import ContactForm from './components/ContactForm'
 import './App.css'
 import './jgf-brand.css'
 
@@ -21,6 +22,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [tasks, setTasks] = useState({})
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024)
+  const [showContactForm, setShowContactForm] = useState(false)
   const { isAuthenticated, loading, authenticatedFetch } = useAuth()
 
   // Handle window resize
@@ -48,12 +50,12 @@ function AppContent() {
       const response = await authenticatedFetch('/tasks')
       if (response.ok) {
         const data = await response.json()
-        setTasks(data.tasks || [])
-      } else {
-        console.error('Failed to load tasks:', response.status)
+        // Convert tasks object to array for easier use in components
+        const tasksArray = data.tasks ? Object.values(data.tasks) : []
+        setTasks(tasksArray)
       }
     } catch (error) {
-      console.error('Error loading tasks:', error)
+      // Silent error handling for production
     }
   }, [authenticatedFetch])
 
@@ -65,23 +67,47 @@ function AppContent() {
   }, [isAuthenticated, loadTasks])
 
   const handleSaveToTask = async (taskId, timeToSave) => {
+    // Find the task before saving
+    const taskBefore = tasks.find(t => t.id === parseInt(taskId))
+    const timeBefore = taskBefore ? taskBefore.time_spent : 0
+    
+    // Convert ms to hours and round to 6 decimal places to avoid precision issues
+    let timeToAdd = Math.round((timeToSave / (1000 * 60 * 60)) * 1000000) / 1000000
+    
+    // Only set a very small minimum (1 second = 0.000278 hours) for edge cases
+    const minimumHours = 1 / 3600 // 1 second in hours
+    if (timeToAdd < minimumHours) {
+      timeToAdd = minimumHours
+    }
+    
     try {
+      const payload = {
+        task_id: parseInt(taskId),
+        hours: timeToAdd,
+        date: new Date().toISOString().split('T')[0],
+        description: `Timer session: ${(timeToSave / 1000).toFixed(1)} seconds`
+      }
+      
       // Use task ID for the new API endpoint format
       const timeResponse = await authenticatedFetch(`/tasks/${taskId}/time`, {
         method: 'POST',
-        body: JSON.stringify({
-          task_id: parseInt(taskId),
-          hours: timeToSave / (1000 * 60 * 60), // Convert ms to hours
-          date: new Date().toISOString().split('T')[0],
-          description: `Timer session: ${(timeToSave / (1000 * 60)).toFixed(1)} minutes`
-        })
+        body: JSON.stringify(payload)
       })
       
       if (timeResponse.ok) {
-        await loadTasks() // This will update the tasks state and refresh all components
+        await loadTasks() // This will update the tasks state
+        
+        // Find the task after saving to show the updated time
+        setTimeout(() => {
+          const taskAfter = tasks.find(t => t.id === parseInt(taskId))
+          const timeAfter = taskAfter ? taskAfter.time_spent : 0
+        }, 100) // Small delay to let state update
+        
+      } else {
+        const errorText = await timeResponse.text()
       }
     } catch (error) {
-      console.error('Error saving time to task:', error)
+      // Silent error handling for production
     }
   }
 
@@ -136,6 +162,7 @@ function AppContent() {
                     Task Management
                   </h3>
                   <EnhancedTaskManager 
+                    tasks={tasks}
                     onTasksChange={loadTasks}
                   />
                 </div>
@@ -177,6 +204,7 @@ function AppContent() {
               Task Management
             </h3>
             <EnhancedTaskManager 
+              tasks={tasks}
               onTasksChange={loadTasks}
             />
           </div>
@@ -186,8 +214,8 @@ function AppContent() {
         return (
           <div className="section">
             <h3>
-              <span className="section-icon">💰</span>
-              Rate Configuration
+              <span className="section-icon">�</span>
+              Category Configuration
             </h3>
             <RateConfiguration />
           </div>
@@ -228,7 +256,15 @@ function AppContent() {
         <div className="header-content">
           <div className="header-left">
             <div className="brand-logo-row">
-              <img src="/jgf-logo-main2.png" alt="JGF Logo" className="jgf-logo" />
+              <a 
+                href="https://jollygreenfrog.co.uk" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="jgf-logo-link"
+                title="Return to JollyGreenFrogs website"
+              >
+                <img src="/jgf-logo-main2.png" alt="JGF Logo" className="jgf-logo" />
+              </a>
               <h1 className="app-title">
                 <img src="/clockit-icon.svg" alt="ClockIt" className="app-logo" />
                 ClockIt
@@ -257,8 +293,41 @@ function AppContent() {
       </div>
 
       <footer className="footer">
-        <span className="footer-message">Tech for All - Powered By JGF</span>
+        <div className="footer-content">
+          <span className="footer-message">Tech for All - Powered By JGF</span>
+          <div className="footer-links">
+            <a 
+              href="https://jollygreenfrog.co.uk" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              🌐 JollyGreenFrog.co.uk
+            </a>
+            <span className="footer-separator">|</span>
+            <a 
+              href="https://jgfgroup.co.uk" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              🏢 JGFGroup.co.uk
+            </a>
+            <span className="footer-separator">|</span>
+            <button 
+              onClick={() => setShowContactForm(true)}
+              className="footer-link contact-button"
+            >
+              📧 Contact Us
+            </button>
+          </div>
+        </div>
       </footer>
+
+      {/* Contact Form Modal */}
+      {showContactForm && (
+        <ContactForm onClose={() => setShowContactForm(false)} />
+      )}
     </div>
   )
 }

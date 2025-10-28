@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    DECIMAL,
 )
 
 from .connection import Base
@@ -33,22 +34,25 @@ class UserConfig(Base):
 
 
 class Task(Base):
-    """Task model with enhanced features"""
+    """Task model with proper category relationship"""
 
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
-    name = Column(String, index=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
+    
+    name = Column(String(200), index=True, nullable=False)
     description = Column(Text, nullable=True)
-    category = Column(String, nullable=True, index=True)
-    time_spent = Column(Float, default=0.0)  # Time in milliseconds
-    hourly_rate = Column(Float, nullable=True)  # Override default rate
+    time_spent = Column(DECIMAL(10, 6), default=0.0)  # Time in hours with 6 decimal precision (1-second accuracy)
+    
+    # Rate override - if null, inherit from category
+    hourly_rate_override = Column(Float, nullable=True)  # Override category rate
+    
     is_active = Column(Boolean, default=True)
+    is_completed = Column(Boolean, default=False)  # Task completion status
 
     # Multi-tenancy: Tasks are unique per user
-    # Removed unique=True from name to allow same task names across users
-
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -62,7 +66,7 @@ class TimeEntry(Base):
     user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)  # Link to task
     task_name = Column(String, index=True)  # Denormalized for reporting
-    duration = Column(Float)  # Duration in milliseconds
+    duration = Column(DECIMAL(10, 6))  # Duration in hours with 6 decimal precision (1-second accuracy)
     start_time = Column(DateTime, nullable=True)
     end_time = Column(DateTime, nullable=True)
     description = Column(Text, nullable=True)
@@ -71,16 +75,27 @@ class TimeEntry(Base):
 
 
 class Category(Base):
-    """Task categories"""
+    """Task categories with rate and configuration information"""
 
     __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(UUID(), ForeignKey("users.id"), index=True, nullable=False)
-    name = Column(String, index=True)  # Unique per user, not globally
+    name = Column(String(100), index=True, nullable=False)  # Unique per user
     description = Column(Text, nullable=True)
-    color = Column(String, nullable=True)  # For UI theming
+    color = Column(String(10), nullable=True, default="#007bff")  # Hex color for UI
+    
+    # Rate information - core business logic
+    day_rate = Column(Float, nullable=False, default=0.0)  # Rate per day
+    hourly_rate = Column(Float, nullable=True)  # Calculated from day_rate (day_rate/8)
+    
+    # Future extensibility
+    tags = Column(String(500), nullable=True)  # Comma-separated tags
+    is_active = Column(Boolean, default=True)  # For soft deletion
+    is_default = Column(Boolean, default=False)  # User's default category
+    
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Currency(Base):
