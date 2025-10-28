@@ -67,9 +67,6 @@ function AppContent() {
   }, [isAuthenticated, loadTasks])
 
   const handleSaveToTask = async (taskId, timeToSave) => {
-    // Find the task before saving
-    const taskBefore = tasks.find(t => t.id === parseInt(taskId))
-    
     // Convert ms to hours and round to 6 decimal places to avoid precision issues
     let timeToAdd = Math.round((timeToSave / (1000 * 60 * 60)) * 1000000) / 1000000
     
