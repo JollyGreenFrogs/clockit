@@ -9,7 +9,8 @@ services:
     depends_on:
       - clockit-backend
     networks:
-      - clockit-network
+      clockit-network:
+        ipv4_address: ${FRONTEND_IP:-172.20.0.10}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
@@ -29,17 +30,19 @@ services:
       - CLOCKIT_DATA_DIR=/app/data
       - PYTHONPATH=/app
       - DATABASE_TYPE=postgres
-      - POSTGRES_HOST=clockit-db
+      - POSTGRES_HOST=${DATABASE_IP:-172.20.0.20}
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-clockit}
       - POSTGRES_USER=${POSTGRES_USER:-clockit}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - SECRET_KEY=${SECRET_KEY}
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DISABLE_HTTPS_REDIRECT=${DISABLE_HTTPS_REDIRECT:-false}
     depends_on:
       - clockit-db
     networks:
-      - clockit-network
+      clockit-network:
+        ipv4_address: ${BACKEND_IP:-172.20.0.30}
     volumes:
       - clockit_data:/app/data
       - clockit_logs:/app/logs
@@ -61,7 +64,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - clockit-network
+      clockit-network:
+        ipv4_address: ${DATABASE_IP:-172.20.0.20}
     # Port exposure removed for security - use internal networking only
     # To access database for debugging, use: docker exec -it clockit-db psql -U clockit
     healthcheck:
@@ -84,5 +88,6 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
-          gateway: 172.20.0.1
+        # Dev environment: 172.20.0.0/24, Prod environment: 172.20.1.0/24
+        - subnet: ${NETWORK_SUBNET:-172.20.0.0/24}
+          gateway: ${NETWORK_GATEWAY:-172.20.0.1}
