@@ -78,15 +78,6 @@ const UserMenu = () => {
               👤 Profile Settings
             </button>
             
-            <button 
-              className="user-menu-item"
-              onClick={() => {
-                setIsOpen(false);
-                setShowProfile(true);
-              }}
-            >
-              ⚙️ Account Settings
-            </button>
             
             <div style={{ height: '1px', background: '#e1e5e9', margin: '8px 0' }}></div>
             
