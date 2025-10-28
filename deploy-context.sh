@@ -152,13 +152,15 @@ case "$COMMAND" in
             cp "$ENV_FILE" "$SCRIPT_DIR/.env"
         else
             # Development environment
-            ENV_FILE="$SCRIPT_DIR/.env"
+            ENV_FILE="$SCRIPT_DIR/.env.dev"
             if [ ! -f "$ENV_FILE" ]; then
-                print_warning "Development .env file not found. Creating from .env.example..."
+                print_warning "Development .env.dev file not found. Creating from .env.example..."
                 cp "$SCRIPT_DIR/.env.example" "$ENV_FILE"
-                print_warning "Please edit .env file with your development configuration"
+                print_warning "Please edit .env.dev file with your development configuration"
             fi
-            print_status "Using development environment configuration (.env)"
+            # Copy dev env file to .env for docker-compose
+            print_status "Using development environment configuration (.env.dev)"
+            cp "$ENV_FILE" "$SCRIPT_DIR/.env"
         fi
         
         # Pull latest images and build

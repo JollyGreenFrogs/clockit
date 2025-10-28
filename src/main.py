@@ -17,6 +17,7 @@ try:
 
     # Import Pydantic models from data_models
     from .data_models.requests import (
+        CategoryUpdate,
         CurrencyConfig,
         OnboardingData,
         RateConfig,
@@ -52,13 +53,14 @@ except ImportError:
 
     # Import Pydantic models from data_models
     from data_models.requests import (
-        TimeEntry,
-        TimeEntryUpdate,
-        TaskCreate,
-        TaskCategoryUpdate,
+        CategoryUpdate,
+        CurrencyConfig,
         OnboardingData,
         RateConfig,
-        CurrencyConfig,
+        TaskCategoryUpdate,
+        TaskCreate,
+        TimeEntry,
+        TimeEntryUpdate,
     )
     from data_models.responses import (
         OnboardingStatus,
@@ -553,10 +555,12 @@ async def get_currency(current_user: User = Depends(get_current_user), db=Depend
 
     user_currency = config_repo.get_config("currency", str(current_user.id))
     if not user_currency:
-        raise HTTPException(status_code=404, detail="User currency not configured")
+        # Return default currency if none set
+        user_currency = {"code": "USD", "symbol": "$", "name": "US Dollar"}
 
-    # Transform the response to match the expected format
+    # Return both the old format for compatibility and new format
     return {
+        "currency": user_currency,  # For CurrencySettings frontend component
         "currency_code": user_currency.get("code"),
         "currency_symbol": user_currency.get("symbol"),
         "currency_name": user_currency.get("name")
@@ -657,6 +661,54 @@ async def create_category(
     except Exception as e:
         logger.error(f"Failed to create category: {e}")
         raise HTTPException(status_code=500, detail="Failed to create category")
+
+
+@app.put("/categories/{category_id}")
+async def update_category(
+    category_id: int,
+    category_data: CategoryUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update an existing category"""
+    try:
+        success = task_manager.update_category(
+            category_id=category_id,
+            user_id=str(current_user.id),
+            name=category_data.name,
+            description=category_data.description,
+            color=category_data.color,
+            day_rate=category_data.day_rate
+        )
+        
+        if success:
+            return {"message": "Category updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Category not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update category: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update category")
+
+
+@app.delete("/categories/{category_id}")
+async def delete_category(
+    category_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete (deactivate) a category"""
+    try:
+        success = task_manager.delete_category(category_id, str(current_user.id))
+        
+        if success:
+            return {"message": "Category deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Category not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete category: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete category")
 
 
 # Invoice Generation Endpoints

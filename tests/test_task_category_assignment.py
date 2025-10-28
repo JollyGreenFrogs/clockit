@@ -71,7 +71,7 @@ skip_in_ci = pytest.mark.skipif(
 class TestTaskCategoryAssignment:
     """Test suite for task category assignment functionality"""
 
-    BASE_URL = "http://localhost:8001"
+    BASE_URL = "http://localhost:8000"
     TEST_USERNAME = "mvlperera"
     TEST_PASSWORD = "TestPassword123!"
 

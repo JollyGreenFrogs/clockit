@@ -5,7 +5,7 @@ Currency management business logic
 import logging
 import os
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,35 +26,41 @@ class CurrencyManager:
         db = next(get_db())
         return ConfigRepository(db)
 
-    def load_currency_config(self) -> Dict:
+    def load_currency_config(self, user_id: Optional[str] = None) -> Dict:
         """Load currency configuration from database"""
         try:
             config_repo = self._get_config_repo()
-            config = config_repo.get_config("currency")
+            if user_id:
+                config = config_repo.get_config("currency", user_id)
+            else:
+                config = config_repo.get_config("currency")
             return config if config else self.default_currency.copy()
         except Exception as e:
             self.logger.exception("Error loading currency config: %s", e)
             return self.default_currency.copy()
 
-    def save_currency_config(self, currency_config: Dict) -> bool:
+    def save_currency_config(self, currency_config: Dict, user_id: Optional[str] = None) -> bool:
         """Save currency configuration to database"""
         try:
             config_repo = self._get_config_repo()
-            return config_repo.save_config("currency", currency_config)
+            if user_id:
+                return config_repo.save_config("currency", currency_config, user_id)
+            else:
+                return config_repo.save_config("currency", currency_config)
         except Exception as e:
             self.logger.exception("Error saving currency config: %s", e)
             return False
 
-    def set_currency(self, code: str, symbol: str, name: str) -> bool:
+    def set_currency(self, code: str, symbol: str, name: str, user_id: Optional[str] = None) -> bool:
         """Set the application currency"""
         config = {"code": code, "symbol": symbol, "name": name}
-        return self.save_currency_config(config)
+        return self.save_currency_config(config, user_id)
 
-    def get_current_currency(self) -> Dict:
+    def get_current_currency(self, user_id: Optional[str] = None) -> Dict:
         """Get current currency configuration"""
-        return self.load_currency_config()
+        return self.load_currency_config(user_id)
 
-    def format_currency(self, amount: float, currency_config: Dict = None) -> str:
+    def format_currency(self, amount: float, currency_config: Optional[Dict] = None) -> str:
         """Format currency amount according to currency rules"""
         if currency_config is None:
             currency_config = self.load_currency_config()

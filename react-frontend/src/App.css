@@ -1021,3 +1021,231 @@ input, select, textarea {
 .contact-button:hover {
   opacity: 0.8;
 }
+
+/* User Profile Modal Styles */
+.profile-tabs {
+  display: flex;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  color: #333;
+  background-color: #f8f9fa;
+}
+
+.tab-button.active {
+  color: #28a745;
+  border-bottom-color: #28a745;
+  background-color: #f8f9fa;
+}
+
+.profile-section,
+.security-section {
+  padding: 0 4px;
+}
+
+.profile-info {
+  margin-top: 16px;
+}
+
+.info-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #e9ecef;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+}
+
+.info-item span {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.info-item .status.active {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.info-item .status.inactive {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.info-item .subscription {
+  color: #007bff;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.info-item .onboarding.completed {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.info-item .onboarding.pending {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px 16px;
+  border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(135deg, #28a745, #20693e);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-body {
+  padding: 32px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.error {
+  text-align: center;
+  padding: 40px;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 10px;
+    max-height: 95vh;
+  }
+  
+  .modal-header,
+  .modal-body {
+    padding: 20px;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .tab-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Password Requirements Styling */
+.password-requirements {
+  margin-top: 20px !important;
+  padding: 16px !important;
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+}
+
+.password-requirements h4 {
+  margin: 0 0 12px 0 !important;
+  color: #2c3e50 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.password-requirements ul {
+  margin: 0 !important;
+  padding-left: 20px !important;
+  color: #495057 !important;
+}
+
+.password-requirements li {
+  margin-bottom: 6px !important;
+  color: #495057 !important;
+  line-height: 1.4 !important;
+}
+
+.password-requirements li:last-child {
+  margin-bottom: 0 !important;
+}

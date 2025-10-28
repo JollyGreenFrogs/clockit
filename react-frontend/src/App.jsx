@@ -222,8 +222,6 @@ function AppContent() {
           </div>
         )
       
-
-      
       case 'invoice':
         return (
           <div className="section invoice-section">
