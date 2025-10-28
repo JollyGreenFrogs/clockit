@@ -50,6 +50,7 @@ show_help() {
     echo "  restart Restart the application"
     echo "  status  Show status of running containers"
     echo "  clean   Clean up stopped containers and unused images"
+    echo "  reset-db Reset database (WARNING: DELETES ALL DATA!)"
     echo
     echo "Examples:"
     echo "  $0 dev build    # Build and deploy to dev"
@@ -78,12 +79,12 @@ fi
 
 # Validate command
 case "$COMMAND" in
-    build|logs|stop|restart|status|clean)
+    build|logs|stop|restart|status|clean|reset-db)
         # Valid commands
         ;;
     *)
         print_error "Invalid command: $COMMAND"
-        echo "Valid commands are: build, logs, stop, restart, status, clean"
+        echo "Valid commands are: build, logs, stop, restart, status, clean, reset-db"
         exit 1
         ;;
 esac
@@ -102,19 +103,16 @@ fi
 print_status "Switching to Docker context: $CONTEXT"
 docker context use "$CONTEXT"
 
-# Set environment variables based on context
+# Set environment variables based on context (but don't override COMPOSE_PROJECT_NAME to avoid network conflicts)
 if [ "$CONTEXT" = "prod" ]; then
-    COMPOSE_PROJECT_NAME="${PROJECT_NAME}_prod"
     ENVIRONMENT="production"
     DEBUG="false"
 else
-    COMPOSE_PROJECT_NAME="${PROJECT_NAME}_dev"
     ENVIRONMENT="development"
     DEBUG="true"
 fi
 
 # Export environment variables for docker-compose
-export COMPOSE_PROJECT_NAME
 export ENVIRONMENT
 export DEBUG
 
@@ -122,6 +120,15 @@ export DEBUG
 case "$COMMAND" in
     build)
         print_status "Building and deploying ClockIt to $CONTEXT..."
+        
+        # Reset environment variables to prevent conflicts with .env files
+        print_status "Resetting environment variables to use .env file values..."
+        unset API_KEY CORS_ALLOW_CREDENTIALS CORS_ORIGINS DATABASE_IP DATABASE_TYPE ENVIRONMENT \
+              JWT_ACCESS_TOKEN_EXPIRE_MINUTES JWT_ALGORITHM JWT_EXPIRATION_HOURS JWT_REFRESH_TOKEN_EXPIRE_DAYS \
+              JWT_SECRET_KEY POSTGRES_DB POSTGRES_HOST POSTGRES_PASSWORD POSTGRES_PORT POSTGRES_USER \
+              SECRET_KEY ACCESS_TOKEN_EXPIRE_MINUTES RATE_LIMIT_ENABLED RATE_LIMIT_REQUESTS_PER_MINUTE \
+              DISABLE_HTTPS_REDIRECT LOG_LEVEL LOG_FORMAT BACKUP_ENABLED MONITORING_ENABLED \
+              ENABLE_DEBUG_ENDPOINTS CLOCKIT_DATA_DIR PYTHONPATH
         
         # Handle environment-specific .env files
         if [ "$CONTEXT" = "prod" ]; then
@@ -147,6 +154,22 @@ case "$COMMAND" in
                 exit 1
             fi
             
+            # Database protection for production - check if database exists and password is changing
+            if docker volume inspect clockit_postgres_data >/dev/null 2>&1; then
+                print_status "🔒 Database protection: Existing production database detected"
+                if [ -f "$SCRIPT_DIR/.env" ]; then
+                    CURRENT_DB_PASS=$(grep "^POSTGRES_PASSWORD=" "$SCRIPT_DIR/.env" 2>/dev/null | cut -d'=' -f2 || echo "")
+                    NEW_DB_PASS=$(grep "^POSTGRES_PASSWORD=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 || echo "")
+                    if [ -n "$CURRENT_DB_PASS" ] && [ -n "$NEW_DB_PASS" ] && [ "$CURRENT_DB_PASS" != "$NEW_DB_PASS" ]; then
+                        print_error "🚨 DATABASE PASSWORD CHANGE DETECTED!"
+                        print_warning "Changing the database password will break access to existing data."
+                        print_warning "If you need to change the password, use: $0 $CONTEXT reset-db"
+                        print_warning "WARNING: reset-db will DELETE ALL DATABASE DATA!"
+                        exit 1
+                    fi
+                fi
+            fi
+            
             # Copy prod env file to .env for docker-compose
             print_status "Using production environment configuration (.env.prod)"
             cp "$ENV_FILE" "$SCRIPT_DIR/.env"
@@ -162,6 +185,10 @@ case "$COMMAND" in
             print_status "Using development environment configuration (.env.dev)"
             cp "$ENV_FILE" "$SCRIPT_DIR/.env"
         fi
+        
+        # Remove and recreate Docker network to ensure correct settings
+        print_status "Resetting Docker network for $CONTEXT..."
+        docker network rm clockit-network 2>/dev/null || true
         
         # Pull latest images and build
         print_status "Pulling latest base images..."
@@ -234,5 +261,33 @@ case "$COMMAND" in
         else
             print_status "Cleanup cancelled"
         fi
+        ;;
+        
+    reset-db)
+        print_error "🚨 DATABASE RESET WARNING!"
+        print_warning "This will PERMANENTLY DELETE ALL DATABASE DATA in $CONTEXT environment!"
+        print_warning "This action cannot be undone!"
+        echo
+        if [ "$CONTEXT" = "prod" ]; then
+            print_error "⚠️  PRODUCTION DATABASE RESET ⚠️"
+            print_warning "You are about to delete the PRODUCTION database!"
+            echo
+            read -p "Type 'DELETE PRODUCTION DATA' to confirm: " -r
+            if [ "$REPLY" != "DELETE PRODUCTION DATA" ]; then
+                print_status "Database reset cancelled - confirmation text did not match"
+                exit 0
+            fi
+        else
+            read -p "Type 'DELETE' to confirm database reset: " -r
+            if [ "$REPLY" != "DELETE" ]; then
+                print_status "Database reset cancelled"
+                exit 0
+            fi
+        fi
+        
+        print_status "Stopping services and removing database volumes..."
+        docker-compose down -v
+        print_status "🗑️  Database volumes removed - all data deleted"
+        print_status "You can now run '$0 $CONTEXT build' to create a fresh database"
         ;;
 esac
