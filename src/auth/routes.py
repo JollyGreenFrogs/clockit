@@ -235,12 +235,7 @@ async def logout(current_user=Depends(get_current_user), db: Session = Depends(g
     return {"message": "Successfully logged out"}
 
 
-class PasswordChangeRequest(BaseModel):
-    """Schema for password change request"""
-    current_password: str
-    new_password: str
-
-
+from data_models.requests import PasswordChangeRequest
 @router.post("/change-password")
 @limiter.limit("3/minute")  # Limit password changes to prevent abuse
 async def change_password(
