@@ -4,7 +4,7 @@ Database repositories for data access layer
 
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -410,6 +410,80 @@ class CategoryRepository:
             self.db.add(category)
             self.db.commit()
             return True
+        except Exception as e:
+            self.db.rollback()
+            raise e
+
+    def update_category(
+        self,
+        category_id: int,
+        user_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        color: Optional[str] = None,
+        day_rate: Optional[float] = None,
+    ) -> bool:
+        """Update an existing category"""
+        try:
+            # Convert string UUID to UUID object for comparison
+            user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+            
+            # Check if category exists and belongs to user
+            category = (
+                self.db.query(Category)
+                .filter(Category.id == category_id, Category.user_id == user_uuid)
+                .first()
+            )
+            
+            if not category:
+                return False
+            
+            # Build update dict
+            update_values = {}
+            update_values[Category.updated_at] = datetime.utcnow()
+            
+            if name is not None:
+                update_values[Category.name] = name
+            if description is not None:
+                update_values[Category.description] = description
+            if color is not None:
+                update_values[Category.color] = color
+            if day_rate is not None:
+                update_values[Category.day_rate] = day_rate
+                # Recalculate hourly rate
+                update_values[Category.hourly_rate] = day_rate / 8.0 if day_rate > 0 else 0.0
+            
+            # Perform the update
+            result = (
+                self.db.query(Category)
+                .filter(Category.id == category_id, Category.user_id == user_uuid)
+                .update(update_values)
+            )
+            
+            self.db.commit()
+            return result > 0
+        except Exception as e:
+            self.db.rollback()
+            raise e
+
+    def delete_category(self, category_id: int, user_id: str) -> bool:
+        """Soft delete a category (mark as inactive)"""
+        try:
+            # Convert string UUID to UUID object for comparison
+            user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+            
+            # Perform the soft delete
+            result = (
+                self.db.query(Category)
+                .filter(Category.id == category_id, Category.user_id == user_uuid)
+                .update({
+                    Category.is_active: False,
+                    Category.updated_at: datetime.utcnow()
+                })
+            )
+            
+            self.db.commit()
+            return result > 0
         except Exception as e:
             self.db.rollback()
             raise e

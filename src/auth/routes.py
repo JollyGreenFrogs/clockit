@@ -233,3 +233,44 @@ async def logout(current_user=Depends(get_current_user), db: Session = Depends(g
     db.commit()
 
     return {"message": "Successfully logged out"}
+
+
+class PasswordChangeRequest(BaseModel):
+    """Schema for password change request"""
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+@limiter.limit("3/minute")  # Limit password changes to prevent abuse
+async def change_password(
+    password_data: PasswordChangeRequest,
+    request: Request,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change user password"""
+    auth_service = AuthService(db)
+
+    try:
+        success = auth_service.change_password(
+            user_id=str(current_user.id),
+            current_password=password_data.current_password,
+            new_password=password_data.new_password
+        )
+        
+        if success:
+            return {"message": "Password changed successfully"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid current password"
+            )
+    except HTTPException:
+        # Re-raise specific HTTP exceptions
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password"
+        )

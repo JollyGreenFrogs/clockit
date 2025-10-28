@@ -275,6 +275,32 @@ class TaskManager:
             self.logger.exception("Error creating category: %s", e)
             return False
 
+    def update_category(
+        self,
+        category_id: int,
+        user_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        color: Optional[str] = None,
+        day_rate: Optional[float] = None
+    ) -> bool:
+        """Update an existing category"""
+        try:
+            _, cat_repo, _ = self._get_repositories()
+            return cat_repo.update_category(category_id, user_id, name, description, color, day_rate)
+        except Exception as e:
+            self.logger.exception("Error updating category: %s", e)
+            return False
+
+    def delete_category(self, category_id: int, user_id: str) -> bool:
+        """Delete (deactivate) a category"""
+        try:
+            _, cat_repo, _ = self._get_repositories()
+            return cat_repo.delete_category(category_id, user_id)
+        except Exception as e:
+            self.logger.exception("Error deleting category: %s", e)
+            return False
+
     def get_task_details(self) -> List[Dict]:
         """Get detailed task information"""
         try:

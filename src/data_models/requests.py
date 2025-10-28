@@ -241,6 +241,45 @@ class CategoryCreate(BaseModel):
         return v
 
 
+class CategoryUpdate(BaseModel):
+    """Schema for updating a category"""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    color: Optional[str] = Field(None, min_length=4, max_length=7)
+    day_rate: Optional[float] = Field(None, ge=0)
+
+    @validator("name")
+    def sanitize_name(cls, v):
+        """Sanitize category name"""
+        if v is not None:
+            if not v or not v.strip():
+                raise ValueError("Category name cannot be empty")
+            return sanitize_string(v, max_length=100)
+        return v
+
+    @validator("description")
+    def sanitize_cat_description(cls, v):
+        """Sanitize category description"""
+        if v:
+            return sanitize_description(v, max_length=500)
+        return v
+
+    @validator("color")
+    def validate_color(cls, v):
+        """Validate hex color format"""
+        if v and not v.startswith("#"):
+            raise ValueError("Color must be a hex color starting with #")
+        return v
+
+    @validator("day_rate")
+    def validate_day_rate(cls, v):
+        """Validate day rate"""
+        if v is not None and v < 0:
+            raise ValueError("Day rate cannot be negative")
+        return v
+
+
 # =============================================================================
 # ONBOARDING REQUESTS
 # =============================================================================
@@ -416,3 +455,47 @@ class AdvancedCurrencyConfig(BaseModel):
     def sanitize_name(cls, v):
         """Sanitize currency name"""
         return sanitize_string(v, max_length=100)
+
+
+# =============================================================================
+# PASSWORD MANAGEMENT REQUESTS
+# =============================================================================
+
+
+class PasswordChangeRequest(BaseModel):
+    """Schema for password change request"""
+
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @validator("current_password")
+    def validate_current_password(cls, v):
+        """Validate current password is provided"""
+        if not v or not v.strip():
+            raise ValueError("Current password is required")
+        return v
+
+    @validator("new_password")
+    def validate_new_password(cls, v):
+        """Validate new password strength"""
+        if not v or len(v) < 8:
+            raise ValueError("New password must be at least 8 characters long")
+        
+        # Check for at least one uppercase letter
+        if not any(c.isupper() for c in v):
+            raise ValueError("New password must contain at least one uppercase letter")
+        
+        # Check for at least one lowercase letter
+        if not any(c.islower() for c in v):
+            raise ValueError("New password must contain at least one lowercase letter")
+        
+        # Check for at least one digit
+        if not any(c.isdigit() for c in v):
+            raise ValueError("New password must contain at least one number")
+        
+        # Check for at least one special character
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(c in special_chars for c in v):
+            raise ValueError("New password must contain at least one special character")
+        
+        return v

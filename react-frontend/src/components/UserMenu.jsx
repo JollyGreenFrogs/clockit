@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import UserProfile from './UserProfile';
 import './Auth.css';
 
 const UserMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const { user, logout } = useAuth();
   const menuRef = useRef(null);
 
@@ -37,67 +39,72 @@ const UserMenu = () => {
   };
 
   return (
-    <div className="user-menu" ref={menuRef}>
-      <button 
-        className="user-menu-button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-      >
-        <div className="user-avatar">
-          {getInitials(user?.full_name)}
-        </div>
-        <span className="user-name">
-          {user?.full_name || user?.username || 'User'}
-        </span>
-        <span className="dropdown-arrow">
-          {isOpen ? '▲' : '▼'}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="user-menu-dropdown">
-          <div className="user-menu-item" style={{ borderBottom: '1px solid #e1e5e9', marginBottom: '8px', paddingBottom: '12px' }}>
-            <div style={{ fontWeight: '600', fontSize: '14px' }}>
-              {user?.full_name || user?.username}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
-              {user?.email}
-            </div>
+    <>
+      <div className="user-menu" ref={menuRef}>
+        <button 
+          className="user-menu-button"
+          onClick={() => setIsOpen(!isOpen)}
+          aria-expanded={isOpen}
+        >
+          <div className="user-avatar">
+            {getInitials(user?.full_name)}
           </div>
-          
-          <button 
-            className="user-menu-item"
-            onClick={() => {
-              setIsOpen(false);
-              // Add profile management functionality here later
-              alert('Profile management coming soon!');
-            }}
-          >
-            👤 Profile Settings
-          </button>
-          
-          <button 
-            className="user-menu-item"
-            onClick={() => {
-              setIsOpen(false);
-              // Add account settings functionality here later
-              alert('Account settings coming soon!');
-            }}
-          >
-            ⚙️ Account Settings
-          </button>
-          
-          <div style={{ height: '1px', background: '#e1e5e9', margin: '8px 0' }}></div>
-          
-          <button 
-            className="user-menu-item danger"
-            onClick={handleLogout}
-          >
-            🚪 Sign Out
-          </button>
-        </div>
-      )}
-    </div>
+          <span className="user-name">
+            {user?.full_name || user?.username || 'User'}
+          </span>
+          <span className="dropdown-arrow">
+            {isOpen ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {isOpen && (
+          <div className="user-menu-dropdown">
+            <div className="user-menu-item" style={{ borderBottom: '1px solid #e1e5e9', marginBottom: '8px', paddingBottom: '12px' }}>
+              <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                {user?.full_name || user?.username}
+              </div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                {user?.email}
+              </div>
+            </div>
+            
+            <button 
+              className="user-menu-item"
+              onClick={() => {
+                setIsOpen(false);
+                setShowProfile(true);
+              }}
+            >
+              👤 Profile Settings
+            </button>
+            
+            <button 
+              className="user-menu-item"
+              onClick={() => {
+                setIsOpen(false);
+                setShowProfile(true);
+              }}
+            >
+              ⚙️ Account Settings
+            </button>
+            
+            <div style={{ height: '1px', background: '#e1e5e9', margin: '8px 0' }}></div>
+            
+            <button 
+              className="user-menu-item danger"
+              onClick={handleLogout}
+            >
+              🚪 Sign Out
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <UserProfile 
+        isOpen={showProfile} 
+        onClose={() => setShowProfile(false)} 
+      />
+    </>
   );
 };
 
