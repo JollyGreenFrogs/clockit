@@ -106,6 +106,7 @@ electron/
 .env.docker
 .env.production
 .env.staging
+.env.dev
 
 # Security - Never commit secrets
 secrets/
