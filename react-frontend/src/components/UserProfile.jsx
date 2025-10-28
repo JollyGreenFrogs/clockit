@@ -6,28 +6,27 @@ function UserProfile({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('profile')
   const [userInfo, setUserInfo] = useState(null)
   const [loading, setLoading] = useState(true)
-  const { authenticatedFetch, user } = useAuth()
+  const { authenticatedFetch } = useAuth()
 
   useEffect(() => {
     if (isOpen) {
+      const loadUserInfo = async () => {
+        try {
+          setLoading(true)
+          const response = await authenticatedFetch('/auth/me')
+          if (response.ok) {
+            const userData = await response.json()
+            setUserInfo(userData)
+          }
+        } catch (error) {
+          console.error('Failed to load user info:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
       loadUserInfo()
     }
-  }, [isOpen])
-
-  const loadUserInfo = async () => {
-    try {
-      setLoading(true)
-      const response = await authenticatedFetch('/auth/me')
-      if (response.ok) {
-        const data = await response.json()
-        setUserInfo(data)
-      }
-    } catch (error) {
-      console.error('Failed to load user info:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [isOpen, authenticatedFetch])
 
   if (!isOpen) return null
 
