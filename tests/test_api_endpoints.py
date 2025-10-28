@@ -197,11 +197,9 @@ def test_currency_endpoints(client, temp_data_dir):
     response = client.get("/currency", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert "currency" in data
-    currency = data["currency"]
-    assert "code" in currency
-    assert "symbol" in currency
-    assert "name" in currency
+    assert "currency_code" in data
+    assert "currency_symbol" in data
+    assert "currency_name" in data
 
 
 def test_rates_endpoint(client, temp_data_dir):

@@ -547,16 +547,20 @@ async def delete_rate(task_type: str, current_user: User = Depends(get_current_u
 
 # Currency Configuration Endpoints
 @app.get("/currency")
-async def get_currency(current_user: User = Depends(get_current_user)):
+async def get_currency(current_user: User = Depends(get_current_user), db=Depends(get_db)):
     """Get current currency configuration for the authenticated user"""
-    db = next(get_db())
     config_repo = ConfigRepository(db)
 
     user_currency = config_repo.get_config("currency", str(current_user.id))
     if not user_currency:
         raise HTTPException(status_code=404, detail="User currency not configured")
 
-    return {"currency": user_currency}
+    # Transform the response to match the expected format
+    return {
+        "currency_code": user_currency.get("code"),
+        "currency_symbol": user_currency.get("symbol"),
+        "currency_name": user_currency.get("name")
+    }
 
 
 @app.get("/currencies")
@@ -808,6 +812,7 @@ async def complete_onboarding(
     try:
         # Update user's onboarding status and default category
         from auth.services import AuthService
+        from database.repositories import CategoryRepository
 
         auth_service = AuthService(db)
         success = auth_service.complete_user_onboarding(
@@ -818,9 +823,12 @@ async def complete_onboarding(
         if not success:
             raise HTTPException(status_code=500, detail="Failed to complete onboarding")
 
+        # Create categories using the same database session to avoid foreign key constraint violations
+        category_repo = CategoryRepository(db)
+        
         # Create the default category with its rate
         default_rate = onboarding_data.rates.get(onboarding_data.default_category, 0.0)
-        task_manager.create_category(
+        category_repo.create_category(
             name=onboarding_data.default_category.strip(),
             description="Default category created during onboarding",
             color="#28a745",  # Green color for default category
@@ -832,7 +840,7 @@ async def complete_onboarding(
         for category_name in onboarding_data.categories:
             if category_name.strip():
                 category_rate = onboarding_data.rates.get(category_name, 0.0)
-                task_manager.create_category(
+                category_repo.create_category(
                     name=category_name.strip(),
                     description="Category created during onboarding",
                     color="#007bff",  # Default blue color

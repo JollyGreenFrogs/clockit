@@ -19,7 +19,8 @@ function CurrencySettings() {
       const response = await authenticatedFetch('/currency/available')
       const data = await response.json()
       setCurrencies(data.currencies || [])
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 
@@ -31,7 +32,8 @@ function CurrencySettings() {
       const currencyCode = data.currency?.code || data.currency || 'USD'
       setCurrentCurrency(currencyCode)
       setSelectedCurrency(currencyCode)
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 
@@ -56,7 +58,7 @@ function CurrencySettings() {
       } else {
         setResult('Error updating currency')
       }
-    } catch (error) {
+    } catch {
       setResult('Error updating currency')
     } finally {
       setLoading(false)
