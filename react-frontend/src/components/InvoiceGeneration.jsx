@@ -1,102 +1,37 @@
-import { useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
+import React from 'react'
 
 function InvoiceGeneration() {
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState('')
-  const [preview, setPreview] = useState('')
-  const { authenticatedFetch } = useAuth()
-
-  const previewInvoice = async () => {
-    setLoading(true)
-    try {
-      const response = await authenticatedFetch('/invoice/preview')
-      const data = await response.json()
-      
-      if (response.ok) {
-        const previewText = data.preview || 'No invoice data available'
-        setPreview(previewText)
-        setResult('Invoice preview generated successfully!')
-      } else {
-        setResult('Error generating preview: ' + (data.detail || 'Unknown error'))
-      }
-    } catch {
-      // Silent error handling
-      setResult('Error generating preview')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const generateInvoice = async () => {
-    setLoading(true)
-    try {
-      const response = await authenticatedFetch('/invoice/generate', {
-        method: 'POST'
-      })
-
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `invoice-${new Date().toISOString().split('T')[0]}.csv`
-        a.click()
-        window.URL.revokeObjectURL(url)
-        setResult('Invoice generated and downloaded successfully!')
-      } else {
-        const data = await response.json()
-        setResult('Error generating invoice: ' + (data.detail || 'Unknown error'))
-      }
-    } catch {
-      setResult('Error generating invoice')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="invoice-generation">
-      <div className="btn-group">
-        <button 
-          onClick={previewInvoice} 
-          disabled={loading} 
-          className="btn btn-secondary"
-        >
-          {loading ? <span className="loading"></span> : '👁️'} Preview Invoice
-        </button>
-        <button 
-          onClick={generateInvoice} 
-          disabled={loading} 
-          className="btn btn-success"
-        >
-          {loading ? <span className="loading"></span> : '📄'} Generate & Export
-        </button>
+      <div className="coming-soon-container" style={{
+        textAlign: 'center',
+        padding: '60px 20px',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '12px',
+        color: 'white',
+        margin: '20px 0'
+      }}>
+        <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🚧</div>
+        <h2 style={{ fontSize: '2.5rem', marginBottom: '15px', fontWeight: 'bold' }}>
+          Invoice Generation
+        </h2>
+        <h3 style={{ fontSize: '1.8rem', marginBottom: '20px', fontWeight: '300' }}>
+          Coming Soon
+        </h3>
+        <p style={{ fontSize: '1.1rem', opacity: '0.9', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+          We're working hard to bring you a powerful invoice generation system. 
+          This feature will allow you to create professional invoices from your tracked time and tasks.
+        </p>
+        <div style={{ marginTop: '30px', padding: '20px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'inline-block' }}>
+          <h4 style={{ margin: '0 0 10px 0', fontSize: '1.2rem' }}>Coming Features:</h4>
+          <ul style={{ listStyle: 'none', padding: '0', margin: '0', fontSize: '1rem' }}>
+            <li style={{ margin: '8px 0' }}>📊 Automated invoice generation</li>
+            <li style={{ margin: '8px 0' }}>💰 Multi-currency support</li>
+            <li style={{ margin: '8px 0' }}>📄 PDF export functionality</li>
+            <li style={{ margin: '8px 0' }}>⚙️ Customizable invoice templates</li>
+          </ul>
+        </div>
       </div>
-
-      {result && (
-        <div className={`alert ${result.includes('Error') ? 'alert-error' : 'alert-success'}`}>
-          {result}
-        </div>
-      )}
-
-      {preview && (
-        <div className="invoice-preview">
-          <h4>Invoice Preview</h4>
-          <div className="preview-content">
-            <pre style={{ 
-              background: '#f8f9fa', 
-              padding: '15px', 
-              borderRadius: '8px',
-              fontSize: '0.9em',
-              overflow: 'auto',
-              maxHeight: '300px'
-            }}>
-              {preview}
-            </pre>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

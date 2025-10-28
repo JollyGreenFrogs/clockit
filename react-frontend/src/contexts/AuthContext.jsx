@@ -6,8 +6,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('access_token'));
 
-  // API base URL - use relative URLs for Vite proxy
-  const API_BASE = '';
+  // API base URL - use environment variable for production, relative for dev
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
   // Initialize auth state on app load
   useEffect(() => {
