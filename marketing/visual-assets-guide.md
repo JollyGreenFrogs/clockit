@@ -3,7 +3,7 @@
 ## Available Screenshots
 
 ### 1. Login Interface
-**File:** https://github.com/user-attachments/assets/58df830d-1c98-4cda-8208-3cdc45c484f8
+**File:** See assets.md - LOGIN_INTERFACE
 **Description:** Clean, professional login screen with ClockIt branding
 **Best for:** LinkedIn posts, professional social media
 **Key Elements:**
@@ -13,7 +13,7 @@
 - "Sign in to continue time tracking" subtitle
 
 ### 2. Signup Interface  
-**File:** https://github.com/user-attachments/assets/8656ff7b-800b-4cec-a357-29300adcaf11
+**File:** See assets.md - SIGNUP_INTERFACE
 **Description:** User-friendly registration form showing ease of onboarding
 **Best for:** Facebook posts, community-focused content
 **Key Elements:**

@@ -26,7 +26,7 @@ ClockIt helps you track time, stay organized, and get paid faster!
 Get ClockIt today - your future self will thank you! 💪
 
 **Image:** ClockIt Signup Interface Screenshot
-**URL:** https://github.com/user-attachments/assets/8656ff7b-800b-4cec-a357-29300adcaf11
+**URL:** See assets.md - SIGNUP_INTERFACE
 
 **Hashtags:** #FreeTools #TimeTracking #SmallBusiness #Freelancer #Productivity
 

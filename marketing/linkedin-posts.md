@@ -21,7 +21,7 @@ Whether you're a freelancer, consultant, or part of a development team, ClockIt 
 🚀 Ready to take control of your time? Get started today!
 
 **Image:** ClockIt Login Interface Screenshot
-**URL:** https://github.com/user-attachments/assets/58df830d-1c98-4cda-8208-3cdc45c484f8
+**URL:** See assets.md - LOGIN_INTERFACE
 
 **Hashtags:** #TimeTracking #ProductivityTools #FreeSoftware #OpenSource #ProjectManagement #Freelancing #Consulting
 

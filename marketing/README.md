@@ -34,9 +34,9 @@ This document package provides comprehensive social media communications content
 
 ### 🖼️ Visual Assets Available
 1. **ClockIt Login Interface** - Professional, clean design showcasing ease of use
-   - URL: https://github.com/user-attachments/assets/58df830d-1c98-4cda-8208-3cdc45c484f8
+   - URL: See assets.md - LOGIN_INTERFACE
 2. **ClockIt Signup Interface** - User-friendly onboarding experience
-   - URL: https://github.com/user-attachments/assets/8656ff7b-800b-4cec-a357-29300adcaf11
+   - URL: See assets.md - SIGNUP_INTERFACE
 
 ## Platform-Specific Content
 

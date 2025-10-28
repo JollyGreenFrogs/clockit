@@ -22,7 +22,7 @@ Whether you're a freelancer, consultant, or part of a development team, ClockIt 
 
 #TimeTracking #ProductivityTools #FreeSoftware #OpenSource #ProjectManagement #Freelancing #Consulting
 
-[Include screenshot: ClockIt Login Interface - https://github.com/user-attachments/assets/58df830d-1c98-4cda-8208-3cdc45c484f8]
+[Include screenshot: ClockIt Login Interface - see assets.md LOGIN_INTERFACE]
 
 ---
 
@@ -100,7 +100,7 @@ Get ClockIt today - your future self will thank you! 💪
 
 #FreeTools #TimeTracking #SmallBusiness #Freelancer #Productivity
 
-[Include screenshot: ClockIt Signup Interface - https://github.com/user-attachments/assets/8656ff7b-800b-4cec-a357-29300adcaf11]
+[Include screenshot: ClockIt Signup Interface - see assets.md SIGNUP_INTERFACE]
 
 ---
 
