@@ -5,7 +5,6 @@ Task management business logic
 import logging
 import os
 import sys
-from datetime import datetime
 from typing import Dict, List, Optional
 
 # Add parent directory to path for imports
@@ -190,12 +189,12 @@ class TaskManager:
         user_id: str,
     ) -> bool:
         """Add time entry to a task by ID for a specific user
-        
+
         Args:
             task_id: The task ID to add time to
             time_entry: Validated TimeEntry Pydantic model with hours, date, description
             user_id: User ID for multi-tenant support
-            
+
         Returns:
             bool: True if successful, False otherwise
         """
@@ -207,7 +206,7 @@ class TaskManager:
 
             # Business rule: Validate time entry data (automatically done by Pydantic)
             # The time_entry parameter is already validated when this method is called
-            
+
             task_repo, _, time_repo = self._get_repositories()
 
             # Business rule: Task must exist for this user
@@ -217,7 +216,7 @@ class TaskManager:
                 return False
 
             # Business rule: Convert datetime to string for database storage
-            date_str = time_entry.date.isoformat() if time_entry.date else datetime.now().isoformat()
+            # (The date is handled by the repository layer)
 
             # Coordinate repository operations
             success = time_repo.add_time_entry(
@@ -229,10 +228,12 @@ class TaskManager:
             )
 
             if success:
-                self.logger.info(f"Added {time_entry.hours}h to task {task_id} for user {user_id}")
-            
+                self.logger.info(
+                    f"Added {time_entry.hours}h to task {task_id} for user {user_id}"
+                )
+
             return success
-            
+
         except Exception as e:
             self.logger.exception("Error adding time entry: %s", e)
             return False
@@ -264,12 +265,12 @@ class TaskManager:
             return []
 
     def create_category(
-        self, name: str, description: str = "", color: str = ""
+        self, name: str, description: str = "", color: str = "", day_rate: float = 0.0, user_id: str = "00000000-0000-0000-0000-000000000001"
     ) -> bool:
-        """Create a new category"""
+        """Create a new category with rate information"""
         try:
             _, cat_repo, _ = self._get_repositories()
-            return cat_repo.create_category(name, description, color)
+            return cat_repo.create_category(name, description, color, day_rate, user_id)
         except Exception as e:
             self.logger.exception("Error creating category: %s", e)
             return False
@@ -302,8 +303,11 @@ class TaskManager:
             return False
 
     def update_time_entry(
-        self, entry_id: int, user_id: str, duration: Optional[float] = None,
-        description: Optional[str] = None
+        self,
+        entry_id: int,
+        user_id: str,
+        duration: Optional[float] = None,
+        description: Optional[str] = None,
     ) -> bool:
         """Update a specific time entry"""
         try:

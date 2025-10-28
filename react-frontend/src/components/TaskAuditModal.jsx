@@ -23,7 +23,6 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
         setError('Failed to load time entries')
       }
     } catch (error) {
-      console.error('Error loading time entries:', error)
       setError('Failed to load time entries')
     } finally {
       setLoading(false)
@@ -32,19 +31,13 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
 
   const loadCategories = useCallback(async () => {
     try {
-      const response = await authenticatedFetch('/rates')
+      const response = await authenticatedFetch('/categories')
       if (response.ok) {
         const data = await response.json()
-        // Convert rates object to categories array
-        const categoriesArray = Object.keys(data).map(taskType => ({
-          id: taskType,
-          name: taskType,
-          rate: data[taskType]
-        }))
-        setCategories(categoriesArray)
+        // Use the categories array directly from the API response
+        setCategories(data.categories || [])
       }
     } catch (error) {
-      console.error('Error loading categories:', error)
     }
   }, [authenticatedFetch])
 
@@ -74,7 +67,6 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
         setError('Failed to update task category')
       }
     } catch (error) {
-      console.error('Error updating task category:', error)
       setError('Failed to update task category')
     } finally {
       setLoading(false)
@@ -99,7 +91,6 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
         setError('Failed to delete time entry')
       }
     } catch (error) {
-      console.error('Error deleting time entry:', error)
       setError('Failed to delete time entry')
     } finally {
       setLoading(false)
@@ -124,7 +115,6 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
         setError('Failed to update time entry')
       }
     } catch (error) {
-      console.error('Error updating time entry:', error)
       setError('Failed to update time entry')
     } finally {
       setLoading(false)

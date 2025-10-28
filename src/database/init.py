@@ -7,11 +7,11 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
-from .connection import DATABASE_URL, create_tables, engine
-from .repositories import CurrencyRepository
 # Import all models to register them with Base.metadata
-from .auth_models import User
-from .models import UserConfig, Task, TimeEntry, Category
+from .auth_models import User  # noqa: F401
+from .connection import DATABASE_URL, create_tables, engine
+from .models import Category, Task, TimeEntry, UserConfig  # noqa: F401
+from .repositories import CurrencyRepository
 
 logger = logging.getLogger(__name__)
 

@@ -118,6 +118,34 @@ docker-compose down || true
 docker-compose build --no-cache
 docker-compose up -d
 
+print_status "Waiting for database initialization..."
+
+# Wait for backend to complete database initialization
+max_wait=300  # 5 minutes
+wait_time=0
+while [ $wait_time -lt $max_wait ]; do
+    if docker-compose logs clockit-backend | grep -q "Database initialization completed successfully"; then
+        print_status "✅ Database initialization completed!"
+        break
+    elif docker-compose logs clockit-backend | grep -q "Database initialization failed"; then
+        print_error "❌ Database initialization failed!"
+        print_status "Showing backend logs:"
+        docker-compose logs clockit-backend
+        exit 1
+    else
+        echo "Waiting for database initialization... ($wait_time/$max_wait seconds)"
+        sleep 10
+        wait_time=$((wait_time + 10))
+    fi
+done
+
+if [ $wait_time -ge $max_wait ]; then
+    print_error "❌ Database initialization timed out!"
+    print_status "Showing backend logs:"
+    docker-compose logs clockit-backend
+    exit 1
+fi
+
 print_status "Frontend container will serve directly on port 80..."
 
 # Stop and disable system Nginx (we use containerized Nginx now)

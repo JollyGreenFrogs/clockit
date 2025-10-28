@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
-function EnhancedTaskManager({ onTasksChange }) {
+function EnhancedTaskManager({ onTasksChange, tasks: externalTasks }) {
   const [tasks, setTasks] = useState({})
   const [categories, setCategories] = useState([])
   const [taskName, setTaskName] = useState('')
@@ -14,9 +14,19 @@ function EnhancedTaskManager({ onTasksChange }) {
   const { authenticatedFetch } = useAuth()
 
   useEffect(() => {
-    loadTasks()
+    // Only load tasks locally if no external tasks provided
+    if (!externalTasks || externalTasks.length === 0) {
+      loadTasks()
+    }
     loadCategories()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [externalTasks]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update local tasks when external tasks change (e.g., from timer saving time)
+  useEffect(() => {
+    if (externalTasks && Array.isArray(externalTasks)) {
+      setTasks(externalTasks)
+    }
+  }, [externalTasks])
 
   const loadTasks = async () => {
     try {
@@ -29,21 +39,19 @@ function EnhancedTaskManager({ onTasksChange }) {
         setTasks(tasksArray)
       }
     } catch (error) {
-      console.error('Error loading tasks:', error)
     }
   }
 
   const loadCategories = async () => {
     try {
-      const response = await authenticatedFetch('/rates')
+      const response = await authenticatedFetch('/categories')
       if (response.ok) {
         const data = await response.json()
-        // Convert rates object to categories array
-        const categoriesArray = Object.keys(data)
+        // Extract category names from the categories array
+        const categoriesArray = data.categories.map(cat => cat.name)
         setCategories(categoriesArray)
       }
     } catch (error) {
-      console.error('Error loading categories:', error)
     }
   }
 
@@ -104,7 +112,6 @@ function EnhancedTaskManager({ onTasksChange }) {
         setResult(errorData.detail || 'Error creating task')
       }
     } catch (error) {
-      console.error('Error creating task:', error)
       setResult('Error creating task')
     } finally {
       setLoading(false)
@@ -131,7 +138,6 @@ function EnhancedTaskManager({ onTasksChange }) {
         setShowNewCategory(false)
       }
     } catch (error) {
-      console.error('Error adding category:', error)
     }
   }
 
@@ -142,7 +148,6 @@ function EnhancedTaskManager({ onTasksChange }) {
   const deleteTask = async (taskId, taskName) => {
     try {
       setLoading(true)
-      console.log('Deleting task:', taskName, 'ID:', taskId)
       
       // Use task ID instead of encoded name
       const response = await authenticatedFetch(`/tasks/${taskId}`, {
@@ -158,7 +163,6 @@ function EnhancedTaskManager({ onTasksChange }) {
         throw new Error(errorData.detail || `Failed to delete task: ${response.status}`)
       }
     } catch (error) {
-      console.error('Error deleting task:', error)
       setResult(`Error deleting task: ${error.message}`)
     } finally {
       setLoading(false)

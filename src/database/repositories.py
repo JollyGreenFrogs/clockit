@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from .models import Category, Currency, Task, TimeEntry, UserConfig
@@ -107,23 +107,39 @@ class TaskRepository:
                 .filter(and_(Task.user_id == user_uuid, Task.is_active == True))
                 .all()
             )
-            return [
-                {
+            
+            result = []
+            for task in tasks:
+                # Look up category name
+                category_name = ""
+                if task.category_id:
+                    category = self.db.query(Category).filter(Category.id == task.category_id).first()
+                    if category:
+                        category_name = category.name
+                
+                # Calculate hourly rate (from override or category)
+                hourly_rate = task.hourly_rate_override
+                if hourly_rate is None and task.category_id:
+                    category = self.db.query(Category).filter(Category.id == task.category_id).first()
+                    if category:
+                        hourly_rate = category.hourly_rate or (category.day_rate / 8.0 if category.day_rate > 0 else 0.0)
+                
+                result.append({
                     "id": task.id,
                     "name": task.name,
                     "description": task.description,
-                    "category": task.category,
-                    "time_spent": task.time_spent,
-                    "hourly_rate": task.hourly_rate,
+                    "category": category_name,
+                    "time_spent": round(float(task.time_spent), 6) if task.time_spent is not None else 0.0,
+                    "hourly_rate": hourly_rate or 0.0,
                     "created_at": (
                         task.created_at.isoformat() if task.created_at else None
                     ),
                     "updated_at": (
                         task.updated_at.isoformat() if task.updated_at else None
                     ),
-                }
-                for task in tasks
-            ]
+                })
+            
+            return result
         except (ValueError, TypeError):
             # Return empty list for invalid UUIDs
             return []
@@ -148,13 +164,27 @@ class TaskRepository:
         if not task:
             return None
 
+        # Look up category name
+        category_name = ""
+        if task.category_id:
+            category = self.db.query(Category).filter(Category.id == task.category_id).first()
+            if category:
+                category_name = category.name
+        
+        # Calculate hourly rate (from override or category)
+        hourly_rate = task.hourly_rate_override
+        if hourly_rate is None and task.category_id:
+            category = self.db.query(Category).filter(Category.id == task.category_id).first()
+            if category:
+                hourly_rate = category.hourly_rate or (category.day_rate / 8.0 if category.day_rate > 0 else 0.0)
+
         return {
             "id": task.id,
             "name": task.name,
             "description": task.description,
-            "category": task.category,
+            "category": category_name,
             "time_spent": task.time_spent,
-            "hourly_rate": task.hourly_rate,
+            "hourly_rate": hourly_rate or 0.0,
             "created_at": task.created_at.isoformat() if task.created_at else None,
             "updated_at": task.updated_at.isoformat() if task.updated_at else None,
         }
@@ -170,19 +200,37 @@ class TaskRepository:
             .filter(and_(Task.user_id == user_uuid, Task.is_active == True))
             .all()
         )
-        return [
-            {
+        
+        result = []
+        for task in tasks:
+            # Resolve category name from category_id
+            category_name = None
+            category_obj = None
+            if task.category_id:
+                category_obj = (
+                    self.db.query(Category)
+                    .filter(Category.id == task.category_id)
+                    .first()
+                )
+                category_name = category_obj.name if category_obj else None
+            
+            # Calculate hourly rate (from override or category)
+            hourly_rate = task.hourly_rate_override
+            if hourly_rate is None and category_obj:
+                hourly_rate = category_obj.hourly_rate or (category_obj.day_rate / 8.0 if category_obj.day_rate > 0 else 0.0)
+            
+            result.append({
                 "id": task.id,
                 "name": task.name,
                 "description": task.description,
-                "category": task.category,
+                "category": category_name,
                 "time_spent": task.time_spent,
-                "hourly_rate": task.hourly_rate,
+                "hourly_rate": hourly_rate or 0.0,
                 "created_at": task.created_at.isoformat() if task.created_at else None,
                 "updated_at": task.updated_at.isoformat() if task.updated_at else None,
-            }
-            for task in tasks
-        ]
+            })
+        
+        return result
 
     def create_or_update_task(
         self,
@@ -197,9 +245,32 @@ class TaskRepository:
         try:
             # Convert string UUID to UUID object for comparison
             user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+            
+            # Resolve category name to category ID if category is provided
+            category_id = None
+            if category:
+                category_obj = (
+                    self.db.query(Category)
+                    .filter(Category.user_id == user_uuid, Category.name == category)
+                    .first()
+                )
+                if category_obj:
+                    category_id = category_obj.id
+                else:
+                    # If category doesn't exist, create it with default values
+                    new_category = Category(
+                        user_id=user_uuid,
+                        name=category,
+                        description=f"Auto-created category for {category}",
+                        day_rate=0.0
+                    )
+                    self.db.add(new_category)
+                    self.db.flush()  # Get the ID without committing
+                    category_id = new_category.id
+
             task = (
                 self.db.query(Task)
-                .filter(and_(Task.user_id == user_uuid, Task.name == name))
+                .filter(Task.user_id == user_uuid, Task.name == name)
                 .first()
             )
 
@@ -209,19 +280,31 @@ class TaskRepository:
                     task.time_spent = time_spent
                 if description is not None:
                     task.description = description
-                if category is not None:
-                    task.category = category
+                if category_id is not None:
+                    task.category_id = category_id
                 if hourly_rate is not None:
-                    task.hourly_rate = hourly_rate
+                    task.hourly_rate_override = hourly_rate
             else:
-                # Create new task
+                # Create new task - category_id is required
+                if category_id is None:
+                    # Create a default category if none provided
+                    default_category = Category(
+                        user_id=user_uuid,
+                        name="General",
+                        description="Default category",
+                        day_rate=0.0
+                    )
+                    self.db.add(default_category)
+                    self.db.flush()
+                    category_id = default_category.id
+                
                 task = Task(
                     user_id=user_uuid,
                     name=name,
                     description=description or "",
-                    category=category,
+                    category_id=category_id,
                     time_spent=time_spent or 0.0,
-                    hourly_rate=hourly_rate,
+                    hourly_rate_override=hourly_rate,
                 )
                 self.db.add(task)
 
@@ -263,7 +346,7 @@ class TaskRepository:
                     and_(
                         Task.id == task_id,
                         Task.user_id == user_uuid,
-                        Task.is_active == True
+                        Task.is_active == True,
                     )
                 )
                 .update({Task.category: category})
@@ -294,6 +377,10 @@ class CategoryRepository:
                 "name": cat.name,
                 "description": cat.description,
                 "color": cat.color,
+                "day_rate": cat.day_rate,
+                "hourly_rate": cat.hourly_rate,
+                "is_active": cat.is_active,
+                "is_default": cat.is_default,
             }
             for cat in categories
         ]
@@ -303,12 +390,22 @@ class CategoryRepository:
         name: str,
         description: str = None,
         color: str = None,
+        day_rate: float = 0.0,
         user_id: str = "00000000-0000-0000-0000-000000000001",
     ) -> bool:
-        """Create a new category"""
+        """Create a new category with rate information"""
         try:
+            # Calculate hourly rate from day rate (8 hour work day)
+            hourly_rate = day_rate / 8.0 if day_rate > 0 else 0.0
+            
             category = Category(
-                user_id=user_id, name=name, description=description, color=color
+                user_id=user_id, 
+                name=name, 
+                description=description, 
+                color=color or "#007bff",
+                day_rate=day_rate,
+                hourly_rate=hourly_rate,
+                is_active=True
             )
             self.db.add(category)
             self.db.commit()
@@ -347,21 +444,27 @@ class TimeEntryRepository:
                 description=description,
             )
             self.db.add(entry)
-            
+
             # Update task's total time_spent if task_id is provided
             if task_id:
+                # Get the current task first, then update with precise arithmetic
                 task = self.db.query(Task).filter(
                     and_(Task.id == task_id, Task.user_id == uuid.UUID(user_id))
                 ).first()
+                
                 if task:
-                    # Calculate new total time_spent by summing all time entries for this task
-                    total_time = self.db.query(func.sum(TimeEntry.duration)).filter(
-                        and_(TimeEntry.task_id == task_id, TimeEntry.user_id == uuid.UUID(user_id))
-                    ).scalar() or 0.0
-                    total_time += duration  # Add the current entry
-                    task.time_spent = total_time
-                    task.updated_at = datetime.utcnow()
-            
+                    # Calculate new time with full precision - task.time_spent is already a Decimal
+                    current_time = float(task.time_spent) if task.time_spent is not None else 0.0
+                    new_time = round(current_time + duration, 6)
+                    
+                    # Update with the calculated value
+                    self.db.query(Task).filter(
+                        and_(Task.id == task_id, Task.user_id == uuid.UUID(user_id))
+                    ).update({
+                        Task.time_spent: new_time,
+                        Task.updated_at: datetime.utcnow()
+                    })
+
             self.db.commit()
             return True
         except Exception as e:
@@ -375,26 +478,39 @@ class TimeEntryRepository:
             entries = (
                 self.db.query(TimeEntry)
                 .filter(
-                    and_(
-                        TimeEntry.task_id == task_id,
-                        TimeEntry.user_id == user_uuid
-                    )
+                    and_(TimeEntry.task_id == task_id, TimeEntry.user_id == user_uuid)
                 )
                 .order_by(TimeEntry.created_at.desc())
                 .all()
             )
-            
+
             return [
                 {
                     "id": entry.id,
                     "task_id": entry.task_id,
                     "task_name": entry.task_name,
-                    "duration": entry.duration,
+                    "duration": round(float(entry.duration), 6) if entry.duration is not None else 0.0,
                     "description": entry.description,
-                    "start_time": entry.start_time.isoformat() if entry.start_time is not None else None,
-                    "end_time": entry.end_time.isoformat() if entry.end_time is not None else None,
-                    "entry_date": entry.entry_date.isoformat() if entry.entry_date is not None else None,
-                    "created_at": entry.created_at.isoformat() if entry.created_at is not None else None
+                    "start_time": (
+                        entry.start_time.isoformat()
+                        if entry.start_time is not None
+                        else None
+                    ),
+                    "end_time": (
+                        entry.end_time.isoformat()
+                        if entry.end_time is not None
+                        else None
+                    ),
+                    "entry_date": (
+                        entry.entry_date.isoformat()
+                        if entry.entry_date is not None
+                        else None
+                    ),
+                    "created_at": (
+                        entry.created_at.isoformat()
+                        if entry.created_at is not None
+                        else None
+                    ),
                 }
                 for entry in entries
             ]
@@ -407,15 +523,10 @@ class TimeEntryRepository:
             user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
             entry = (
                 self.db.query(TimeEntry)
-                .filter(
-                    and_(
-                        TimeEntry.id == entry_id,
-                        TimeEntry.user_id == user_uuid
-                    )
-                )
+                .filter(and_(TimeEntry.id == entry_id, TimeEntry.user_id == user_uuid))
                 .first()
             )
-            
+
             if entry:
                 self.db.delete(entry)
                 self.db.commit()
@@ -426,27 +537,27 @@ class TimeEntryRepository:
             raise e
 
     def update_time_entry(
-        self, entry_id: int, user_id: str, duration: Optional[float] = None,
-        description: Optional[str] = None
+        self,
+        entry_id: int,
+        user_id: str,
+        duration: Optional[float] = None,
+        description: Optional[str] = None,
     ) -> bool:
         """Update a specific time entry"""
         try:
             user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
-            
+
             update_data = {}
             if duration is not None:
                 update_data[TimeEntry.duration] = duration
             if description is not None:
                 update_data[TimeEntry.description] = description
-            
+
             if update_data:
                 result = (
                     self.db.query(TimeEntry)
                     .filter(
-                        and_(
-                            TimeEntry.id == entry_id,
-                            TimeEntry.user_id == user_uuid
-                        )
+                        and_(TimeEntry.id == entry_id, TimeEntry.user_id == user_uuid)
                     )
                     .update(update_data)
                 )

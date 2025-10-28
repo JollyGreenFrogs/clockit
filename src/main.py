@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,20 +14,26 @@ try:
     from .business.rate_manager import RateManager
     from .business.task_manager import TaskManager
     from .config import Config
+
+    # Import Pydantic models from data_models
+    from .data_models.requests import (
+        CurrencyConfig,
+        OnboardingData,
+        RateConfig,
+        TaskCategoryUpdate,
+        TaskCreate,
+        TimeEntry,
+        TimeEntryUpdate,
+    )
+    from .data_models.responses import (
+        OnboardingStatus,
+    )
     from .database.auth_models import User
     from .database.connection import get_db
     from .database.init import check_database_connection, init_database
     from .database.repositories import ConfigRepository, CurrencyRepository
     from .logging_config import configure_logging
     from .version import get_full_version_info, get_version_string
-    # Import Pydantic models from data_models
-    from .data_models.requests import (
-        TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate, TaskUpdate,
-        OnboardingData, RateConfig, CurrencyConfig, CategoryCreate
-    )
-    from .data_models.responses import (
-        OnboardingStatus, TaskResponse, CategoryResponse, MessageResponse
-    )
 except ImportError:
     # Fallback for when running from src directory
     from version import get_version_string, get_full_version_info
@@ -44,21 +49,26 @@ except ImportError:
     from auth.routes import router as auth_router
     from auth.dependencies import get_current_user
     from database.auth_models import User
+
     # Import Pydantic models from data_models
     from data_models.requests import (
-        TimeEntry, TimeEntryUpdate, TaskCreate, TaskCategoryUpdate, TaskUpdate,
-        OnboardingData, RateConfig, CurrencyConfig, CategoryCreate
+        TimeEntry,
+        TimeEntryUpdate,
+        TaskCreate,
+        TaskCategoryUpdate,
+        OnboardingData,
+        RateConfig,
+        CurrencyConfig,
     )
     from data_models.responses import (
-        OnboardingStatus, TaskResponse, CategoryResponse, MessageResponse
+        OnboardingStatus,
     )
-
 
 import logging
 
 # Validate and configure application
 if not Config.validate():
-    print("Configuration validation failed. Check logs for details.")
+    # Configuration validation failed, check logs for details
     exit(1)
 
 # Configure logging early
@@ -125,13 +135,15 @@ app = FastAPI(
 
 # Setup security middleware (HTTPS redirect and security headers)
 try:
+    from .middleware.rate_limit import setup_rate_limiting
     from .middleware.security import setup_security_middleware
-    from .middleware.rate_limit import setup_rate_limiting, limiter
+
     setup_security_middleware(app)
     setup_rate_limiting(app)
 except ImportError:
+    from middleware.rate_limit import setup_rate_limiting
     from middleware.security import setup_security_middleware
-    from middleware.rate_limit import setup_rate_limiting, limiter
+
     setup_security_middleware(app)
     setup_rate_limiting(app)
 
@@ -139,9 +151,13 @@ except ImportError:
 if Config.ENVIRONMENT == "production":
     # In production, use explicit origins from environment variable
     cors_origins_str = os.getenv("CORS_ORIGINS", "")
-    allowed_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+    allowed_origins = [
+        origin.strip() for origin in cors_origins_str.split(",") if origin.strip()
+    ]
     if not allowed_origins:
-        logger.warning("No CORS origins configured for production - CORS will be restrictive")
+        logger.warning(
+            "No CORS origins configured for production - CORS will be restrictive"
+        )
         allowed_origins = []
 else:
     # Development origins
@@ -157,7 +173,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicit methods
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS",
+        "PATCH",
+    ],  # Explicit methods
     allow_headers=[
         "Content-Type",
         "Authorization",
@@ -317,7 +340,9 @@ async def delete_task(task_id: int, current_user: User = Depends(get_current_use
 
 
 @app.get("/tasks/{task_id}/time-entries")
-async def get_task_time_entries(task_id: int, current_user: User = Depends(get_current_user)):
+async def get_task_time_entries(
+    task_id: int, current_user: User = Depends(get_current_user)
+):
     """Get all time entries for a specific task"""
     try:
         logger.info(f"Getting time entries for task ID: {task_id}")
@@ -325,11 +350,15 @@ async def get_task_time_entries(task_id: int, current_user: User = Depends(get_c
         return {"time_entries": entries}
     except Exception as e:
         logger.exception("Error getting time entries: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to get time entries: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get time entries: {str(e)}"
+        )
 
 
 @app.delete("/time-entries/{entry_id}")
-async def delete_time_entry(entry_id: int, current_user: User = Depends(get_current_user)):
+async def delete_time_entry(
+    entry_id: int, current_user: User = Depends(get_current_user)
+):
     """Delete a specific time entry"""
     try:
         logger.info(f"Deleting time entry ID: {entry_id}")
@@ -342,21 +371,25 @@ async def delete_time_entry(entry_id: int, current_user: User = Depends(get_curr
         raise
     except Exception as e:
         logger.exception("Error deleting time entry: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to delete time entry: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete time entry: {str(e)}"
+        )
 
 
 @app.put("/time-entries/{entry_id}")
 async def update_time_entry(
     entry_id: int,
     update_data: TimeEntryUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Update a specific time entry"""
     try:
         logger.info(f"Updating time entry ID: {entry_id}")
         success = task_manager.update_time_entry(
-            entry_id, str(current_user.id),
-            update_data.duration, update_data.description
+            entry_id,
+            str(current_user.id),
+            update_data.duration,
+            update_data.description,
         )
         if success:
             return {"message": "Time entry updated successfully"}
@@ -366,19 +399,23 @@ async def update_time_entry(
         raise
     except Exception as e:
         logger.exception("Error updating time entry: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to update time entry: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update time entry: {str(e)}"
+        )
 
 
 @app.put("/tasks/{task_id}/category")
 async def update_task_category(
     task_id: int,
     category_data: TaskCategoryUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Update the category of a specific task"""
     try:
         logger.info(f"Updating category for task ID: {task_id}")
-        success = task_manager.update_task_category(task_id, str(current_user.id), category_data.category)
+        success = task_manager.update_task_category(
+            task_id, str(current_user.id), category_data.category
+        )
         if success:
             return {"message": "Task category updated successfully"}
         else:
@@ -387,7 +424,9 @@ async def update_task_category(
         raise
     except Exception as e:
         logger.exception("Error updating task category: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to update task category: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update task category: {str(e)}"
+        )
 
 
 # Rate Configuration Endpoints
@@ -585,12 +624,45 @@ async def get_categories(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to load categories")
 
 
+@app.post("/categories")
+async def create_category(
+    category_data: dict, current_user: User = Depends(get_current_user)
+):
+    """Create a new category with rate information"""
+    try:
+        name = category_data.get("name") or category_data.get("task_type")
+        if not name:
+            raise HTTPException(status_code=400, detail="Category name is required")
+            
+        day_rate = float(category_data.get("day_rate", 0))
+        description = category_data.get("description", f"Category created for {name}")
+        color = category_data.get("color", "#007bff")
+        
+        success = task_manager.create_category(
+            name=str(name),
+            description=description,
+            color=color,
+            day_rate=day_rate,
+            user_id=str(current_user.id)
+        )
+        
+        if success:
+            return {"message": f"Category '{name}' created successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create category")
+    except Exception as e:
+        logger.error(f"Failed to create category: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create category")
+
+
 # Invoice Generation Endpoints
 @app.post("/invoice/generate")
 async def generate_invoice(current_user: User = Depends(get_current_user)):
     """Generate invoice from non-exported tasks"""
     try:
-        result = invoice_manager.generate_invoice(include_exported=False, user_id=str(current_user.id))
+        result = invoice_manager.generate_invoice(
+            include_exported=False, user_id=str(current_user.id)
+        )
 
         if "error" in result:
             raise HTTPException(status_code=400, detail=result["error"])
@@ -603,15 +675,13 @@ async def generate_invoice(current_user: User = Depends(get_current_user)):
 
             total_hours = 0
             for item in result.get("items", []):
-                hours = item.get('total_hours', 0)
+                hours = item.get("total_hours", 0)
                 total_hours += hours
                 csv_lines.append(
                     f"\"{item.get('task', 'N/A')}\",{hours:.2f},{item.get('hour_rate', 'N/A')},{item.get('amount', 'N/A')}"
                 )
 
-            csv_lines.append(
-                f"Total,,{total_hours:.2f},{result.get('total', 'N/A')}"
-            )
+            csv_lines.append(f"Total,,{total_hours:.2f},{result.get('total', 'N/A')}")
             csv_content = "\n".join(csv_lines)
 
             # Return as downloadable file
@@ -640,7 +710,9 @@ async def generate_invoice(current_user: User = Depends(get_current_user)):
 async def preview_invoice(current_user: User = Depends(get_current_user)):
     """Preview invoice without marking tasks as exported"""
     try:
-        result = invoice_manager.generate_invoice(include_exported=False, user_id=str(current_user.id))
+        result = invoice_manager.generate_invoice(
+            include_exported=False, user_id=str(current_user.id)
+        )
 
         if "error" in result:
             return {"preview": result["error"], "status": "no_data"}
@@ -654,14 +726,14 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
             preview_lines.append("ITEMS:")
             total_hours = 0
             for item in result["items"]:
-                hours = item.get('total_hours', 0)
+                hours = item.get("total_hours", 0)
                 total_hours += hours
                 preview_lines.append(
                     f"• {item.get('task', 'N/A')}: {hours:.2f}h @ {item.get('hour_rate', 'N/A')}/hr = {item.get('amount', 'N/A')}"
                 )
 
             preview_lines.append("")
-            total_amount = result.get('total', '0.00')
+            total_amount = result.get("total", "0.00")
             preview_lines.append(f"TOTAL: {total_amount}")
             preview_lines.append(f"Total Hours: {total_hours:.2f}")
 
@@ -673,6 +745,43 @@ async def preview_invoice(current_user: User = Depends(get_current_user)):
         return {"preview": f"Error generating preview: {str(e)}", "status": "error"}
 
 
+# Contact Form Endpoints
+@app.post("/contact")
+async def submit_contact_form(
+    contact_data: dict, current_user: User = Depends(get_current_user)
+):
+    """Submit contact form"""
+    try:
+        # Log the contact form submission
+        logger.info(f"Contact form submitted by user {current_user.username} ({current_user.email})")
+        logger.info(f"Contact type: {contact_data.get('type', 'unknown')}")
+        logger.info(f"Subject: {contact_data.get('subject', 'No subject')}")
+        
+        contact_info = {
+            "timestamp": datetime.now().isoformat(),
+            "user_id": str(current_user.id),
+            "username": current_user.username,
+            "user_email": current_user.email,
+            "form_data": contact_data
+        }
+        
+        # Log the complete submission details
+        logger.info(f"Contact submission details: {contact_info}")
+        
+        # For now, just log to backend - email functionality will be added later
+        logger.info("Contact form logged successfully - email functionality pending configuration")
+        
+        return {
+            "message": "Thank you for your message! Your submission has been logged and we'll get back to you soon.",
+            "status": "success",
+            "logged": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing contact form: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit contact form")
+
+
 # Onboarding Endpoints
 @app.get("/onboarding/status")
 async def get_onboarding_status(current_user: User = Depends(get_current_user)):
@@ -680,39 +789,55 @@ async def get_onboarding_status(current_user: User = Depends(get_current_user)):
     try:
         return OnboardingStatus(
             onboarding_completed=bool(current_user.onboarding_completed),
-            default_category=getattr(current_user, 'default_category', None),
-            needs_onboarding=not bool(current_user.onboarding_completed)
+            default_category=getattr(current_user, "default_category", None),
+            needs_onboarding=not bool(current_user.onboarding_completed),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting onboarding status: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error getting onboarding status: {str(e)}"
+        )
 
 
 @app.post("/onboarding/complete")
 async def complete_onboarding(
     onboarding_data: OnboardingData,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """Complete user onboarding"""
     try:
         # Update user's onboarding status and default category
         from auth.services import AuthService
+
         auth_service = AuthService(db)
         success = auth_service.complete_user_onboarding(
             user_id=str(current_user.id),
-            default_category=onboarding_data.default_category
+            default_category=onboarding_data.default_category,
         )
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to complete onboarding")
 
-        # Create initial categories if provided
+        # Create the default category with its rate
+        default_rate = onboarding_data.rates.get(onboarding_data.default_category, 0.0)
+        task_manager.create_category(
+            name=onboarding_data.default_category.strip(),
+            description="Default category created during onboarding",
+            color="#28a745",  # Green color for default category
+            day_rate=default_rate,
+            user_id=str(current_user.id)
+        )
+
+        # Create additional categories with their rates
         for category_name in onboarding_data.categories:
             if category_name.strip():
+                category_rate = onboarding_data.rates.get(category_name, 0.0)
                 task_manager.create_category(
                     name=category_name.strip(),
                     description="Category created during onboarding",
-                    color="#007bff"  # Default blue color
+                    color="#007bff",  # Default blue color
+                    day_rate=category_rate,
+                    user_id=str(current_user.id)
                 )
 
         # Save rates for all categories (including default category)
@@ -720,11 +845,18 @@ async def complete_onboarding(
             if category_name.strip() and rate > 0:
                 rate_manager.set_rate(category_name.strip(), rate)
 
-        # Save currency configuration
-        currency_success = currency_manager.set_currency(
-            code=onboarding_data.currency_code,
-            symbol=onboarding_data.currency_symbol,
-            name=onboarding_data.currency_name
+        # Save user-specific currency configuration to UserConfig
+        from database.repositories import ConfigRepository
+        config_repo = ConfigRepository(db)
+        currency_config = {
+            "code": onboarding_data.currency_code,
+            "symbol": onboarding_data.currency_symbol,
+            "name": onboarding_data.currency_name
+        }
+        currency_success = config_repo.save_config(
+            config_type="currency",
+            config_data=currency_config,
+            user_id=str(current_user.id)
         )
 
         if not currency_success:
@@ -735,11 +867,13 @@ async def complete_onboarding(
             "default_category": onboarding_data.default_category,
             "categories_created": len(onboarding_data.categories),
             "rates_created": len(onboarding_data.rates),
-            "currency_set": f"{onboarding_data.currency_code} ({onboarding_data.currency_symbol})"
+            "currency_set": f"{onboarding_data.currency_code} ({onboarding_data.currency_symbol})",
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error completing onboarding: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error completing onboarding: {str(e)}"
+        )
 
 
 @app.get("/onboarding/check")
@@ -748,7 +882,7 @@ async def check_onboarding_required(current_user: User = Depends(get_current_use
     return {
         "requires_onboarding": not bool(current_user.onboarding_completed),
         "user_id": str(current_user.id),
-        "username": current_user.username
+        "username": current_user.username,
     }
 
 
@@ -810,9 +944,9 @@ async def shutdown_application(current_user: User = Depends(get_current_user)):
 
     def delayed_shutdown():
         time.sleep(1)  # Give response time to be sent
-        print("\n🛑 Shutdown requested from web interface...")
-        print("💾 All data has been saved automatically")
-        print("👋 Thank you for using ClockIt!")
+        # Shutdown requested from web interface
+        # All data has been saved automatically
+        # Thank you for using ClockIt!
         os._exit(0)  # Force exit
 
     # Start shutdown in background thread

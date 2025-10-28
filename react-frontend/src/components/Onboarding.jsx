@@ -109,11 +109,32 @@ function Onboarding() {
         await refreshUser() // Refresh user data to update onboarding status
         // The AuthContext will handle redirecting to dashboard
       } else {
-        const data = await response.json()
-        setError(data.detail || 'Failed to complete onboarding')
+        let errorMessage = 'Failed to complete onboarding'
+        
+        try {
+          const data = await response.json()
+          
+          if (data.detail) {
+            if (typeof data.detail === 'string') {
+              errorMessage = data.detail
+            } else if (Array.isArray(data.detail)) {
+              // Handle Pydantic validation errors
+              errorMessage = data.detail.map(err => {
+                const field = err.loc ? err.loc.join('.') : 'field'
+                return `${field}: ${err.msg}`
+              }).join(', ')
+            } else if (typeof data.detail === 'object') {
+              // Handle other object errors
+              errorMessage = JSON.stringify(data.detail)
+            }
+          }
+        } catch (jsonError) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        }
+        
+        setError(errorMessage)
       }
     } catch (error) {
-      console.error('Onboarding error:', error)
       setError('Network error during onboarding')
     } finally {
       setLoading(false)

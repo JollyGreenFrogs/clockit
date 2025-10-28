@@ -52,7 +52,9 @@ class InvoiceManager:
             self.logger.exception("Error saving invoice columns: %s", e)
             return False
 
-    def generate_invoice(self, include_exported: bool = False, user_id: str | None = None) -> Dict:
+    def generate_invoice(
+        self, include_exported: bool = False, user_id: str | None = None
+    ) -> Dict:
         """Generate invoice from tasks"""
         if user_id:
             tasks_data = self.task_manager.load_tasks_for_user(user_id)
@@ -64,7 +66,9 @@ class InvoiceManager:
         # Filter tasks for invoice
         eligible_tasks = {}
         for task_id, task in tasks_data["tasks"].items():
-            if task.get("time_spent", 0) > 0:  # Fixed: use time_spent instead of total_hours
+            if (
+                task.get("time_spent", 0) > 0
+            ):  # Fixed: use time_spent instead of total_hours
                 if include_exported or not task.get("exported", False):
                     eligible_tasks[task_id] = task
         if not eligible_tasks:
@@ -73,7 +77,9 @@ class InvoiceManager:
         # Group tasks by category (parent heading)
         grouped_tasks = {}
         for task_id, task in eligible_tasks.items():
-            heading = task.get("category", "Other")  # Fixed: use category instead of parent_heading
+            heading = task.get(
+                "category", "Other"
+            )  # Fixed: use category instead of parent_heading
             if heading not in grouped_tasks:
                 grouped_tasks[heading] = []
             grouped_tasks[heading].append((task_id, task))
@@ -84,7 +90,9 @@ class InvoiceManager:
         task_ids_to_export = []
 
         for heading, tasks in grouped_tasks.items():
-            total_hours = sum(task.get("time_spent", 0) for _, task in tasks)  # Fixed: use time_spent
+            total_hours = sum(
+                task.get("time_spent", 0) for _, task in tasks
+            )  # Fixed: use time_spent
 
             # Get rate for this category
             day_rate = rates.get(heading, 0)
@@ -149,6 +157,6 @@ class InvoiceManager:
 
             return True
 
-        except Exception as e:
-            print(f"Error exporting invoice: {e}")
+        except Exception:
+            # Silent error handling for production
             return False

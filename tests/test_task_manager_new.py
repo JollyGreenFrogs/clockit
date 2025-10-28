@@ -77,22 +77,26 @@ class TestTaskManagerWithMockedDB:
                 "category": "Development",
                 "hourly_rate": 50.0,
                 "created_at": "2025-10-27T00:00:00",
-                "updated_at": "2025-10-27T00:00:00"
+                "updated_at": "2025-10-27T00:00:00",
             }
         ]
 
         result = tm.load_tasks_for_user(user_id)
 
-        assert result == {"tasks": {"1": {
-            "id": 1,
-            "name": "user_task",
-            "time_spent": 1.5,
-            "description": "Test task",
-            "category": "Development",
-            "hourly_rate": 50.0,
-            "created_at": "2025-10-27T00:00:00",
-            "updated_at": "2025-10-27T00:00:00"
-        }}}
+        assert result == {
+            "tasks": {
+                "1": {
+                    "id": 1,
+                    "name": "user_task",
+                    "time_spent": 1.5,
+                    "description": "Test task",
+                    "category": "Development",
+                    "hourly_rate": 50.0,
+                    "created_at": "2025-10-27T00:00:00",
+                    "updated_at": "2025-10-27T00:00:00",
+                }
+            }
+        }
         task_repo.get_all_tasks_detailed.assert_called_once_with(user_id=user_id)
 
     def test_load_tasks_database_error(self, task_manager_with_mocks):
@@ -231,7 +235,7 @@ class TestTaskManagerWithMockedDB:
 
         assert result is True
         category_repo.create_category.assert_called_once_with(
-            "New Category", "A new category", "#ff0000"
+            "New Category", "A new category", "#ff0000", 0.0, "00000000-0000-0000-0000-000000000001"
         )
 
     def test_add_time_entry_success(self, task_manager_with_mocks):

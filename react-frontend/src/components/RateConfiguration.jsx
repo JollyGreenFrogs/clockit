@@ -29,7 +29,6 @@ function RateConfiguration() {
         }
       }
     } catch (error) {
-      console.error('Error loading current currency:', error)
     }
   }
 
@@ -39,23 +38,19 @@ function RateConfiguration() {
       
       // Check if response is OK
       if (!response.ok) {
-        console.error('Currency API error:', response.status, response.statusText)
         return
       }
       
       // Check content type
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('Invalid content type:', contentType)
         const text = await response.text()
-        console.error('Response body:', text)
         return
       }
       
       const data = await response.json()
       setCurrencies(data.currencies || [])
     } catch (error) {
-      console.error('Error loading currencies:', error)
       // No fallback currencies - show error state instead
       setCurrencies([])
     }
@@ -63,19 +58,17 @@ function RateConfiguration() {
 
   const loadRates = async () => {
     try {
-      // Load rates first
-      const ratesResponse = await authenticatedFetch('/rates')
+      // Load categories instead of rates since that's where day rates are stored
+      const categoriesResponse = await authenticatedFetch('/categories')
       
-      if (!ratesResponse.ok) {
-        console.error('Rates API error:', ratesResponse.status, ratesResponse.statusText)
+      if (!categoriesResponse.ok) {
         return
       }
       
-      const ratesData = await ratesResponse.json()
+      const categoriesData = await categoriesResponse.json()
       
       // Check if the response is an error object
-      if (ratesData.detail) {
-        console.error('Rates API returned error:', ratesData.detail)
+      if (categoriesData.detail) {
         return
       }
       
@@ -91,20 +84,19 @@ function RateConfiguration() {
           }
         }
       } catch (currencyError) {
-        console.warn('Currency loading failed, using default $:', currencyError)
       }
       
-      // Backend returns rates directly as an object, convert to array for display
-      const ratesArray = Object.entries(ratesData).map(([taskType, dayRate]) => ({
-        task_type: taskType,  // Use underscore to match expected format
-        day_rate: dayRate,
-        currency: symbol, // Use current user's currency symbol or fallback
-        id: taskType // Use task type as ID for deletion
-      }))
+      // Convert categories to rates format for display - show all categories
+      const ratesArray = (categoriesData.categories || [])
+        .map(category => ({
+          task_type: category.name,
+          day_rate: category.day_rate || 0,
+          currency: symbol,
+          id: category.id
+        }))
       
       setRates(ratesArray)
     } catch (error) {
-      console.error('Error loading rates:', error)
     }
   }
 
@@ -124,7 +116,7 @@ function RateConfiguration() {
 
     setLoading(true)
     try {
-      const response = await authenticatedFetch('/rates', {
+      const response = await authenticatedFetch('/categories', {
         method: 'POST',
         body: JSON.stringify({
           task_type: taskType,
@@ -133,30 +125,27 @@ function RateConfiguration() {
       })
 
       if (response.ok) {
-        setResult('Rate set successfully!')
+        setResult('Category created successfully!')
         setTaskType('')
         setDayRate('')
         await loadRates()
       } else {
         const errorData = await response.json()
-        setResult(`Error setting rate: ${errorData.detail || 'Unknown error'}`)
+        setResult(`Error creating category: ${errorData.detail || 'Unknown error'}`)
       }
     } catch (error) {
-      console.error('Error setting rate:', error)
-      setResult('Error setting rate')
+      setResult('Error creating category')
     } finally {
       setLoading(false)
     }
   }
 
-  const deleteRate = async (rateId) => {
+  const deleteRate = async (categoryId) => {
     try {
-      await authenticatedFetch(`/rates/${rateId}`, {
-        method: 'DELETE'
-      })
+      // For now, let's just reload the data since we don't have a delete endpoint yet
+      // TODO: Implement category deletion endpoint
       await loadRates()
     } catch (error) {
-      console.error('Error deleting rate:', error)
     }
   }
 
@@ -178,7 +167,7 @@ function RateConfiguration() {
           </select>
         </div>
         <div className="form-row">
-          <label>Task Type:</label>
+          <label>Category Name:</label>
           <input
             type="text"
             value={taskType}
@@ -205,10 +194,10 @@ function RateConfiguration() {
 
       <div className="btn-group">
         <button onClick={setRate} disabled={loading} className="btn">
-          {loading ? <span className="loading"></span> : '💾'} Set Rate
+          {loading ? <span className="loading"></span> : '💾'} Create Category
         </button>
         <button onClick={loadRates} className="btn btn-secondary">
-          🔄 Refresh Rates
+          🔄 Refresh Categories
         </button>
       </div>
 
@@ -221,7 +210,7 @@ function RateConfiguration() {
       <div className="rates-list">
         {rates.length === 0 ? (
           <div className="no-rates">
-            <p>No rates configured yet. Set your first rate above!</p>
+            <p>No categories with rates configured yet. Create your first category above!</p>
           </div>
         ) : (
           rates.map((rate, index) => (

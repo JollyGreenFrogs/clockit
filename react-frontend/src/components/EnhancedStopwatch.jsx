@@ -52,6 +52,25 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
     setIsRunning(false)
     setIsPaused(false)
     setShowBreakSection(true)
+    
+    // Auto-save if user was timing a specific task (but show break section first)
+    if (taskForTiming && time > 0) {
+      // Don't auto-save immediately, let user adjust break time first
+      // They can use the auto-save button that will appear
+    }
+  }
+
+  const autoSaveToTimedTask = () => {
+    if (taskForTiming && time > 0) {
+      const taskId = getTaskIdByName(taskForTiming)
+      
+      if (taskId && onSaveToTask) {
+        const breakTime = breakMinutes * 60 * 1000
+        const finalTime = Math.max(0, time - breakTime)
+        onSaveToTask(taskId, finalTime)
+        resetTimer()
+      }
+    }
   }
 
   const resetTimer = () => {
@@ -207,33 +226,75 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
       {/* Save Time to Task */}
       {(time > 0 && !isRunning) && (
         <div className="save-time-section">
-          <h4>Save Time to Task</h4>
-          <div className="save-time">
-            <select 
-              value={selectedTask}
-              onChange={(e) => setSelectedTask(e.target.value)}
-            >
-              <option value="">Select task to save time to</option>
-              {taskList.map(task => (
-                <option key={task.id} value={task.id}>{task.name}</option>
-              ))}
-            </select>
-            <button 
-              onClick={saveTimeToSelectedTask} 
-              disabled={!selectedTask} 
-              className="btn btn-success"
-            >
-              💾 Save Time ({formatTime(getFinalTime())})
-            </button>
-          </div>
-          {taskForTiming && taskForTiming !== getTaskNameById(selectedTask) && (
-            <button 
-              onClick={() => setSelectedTask(getTaskIdByName(taskForTiming))}
-              className="btn btn-secondary"
-              style={{ marginTop: '10px' }}
-            >
-              💾 Save to "{taskForTiming}" (timed task)
-            </button>
+          {taskForTiming ? (
+            // Show auto-save option for timed task
+            <div>
+              <h4>Save Time to "{taskForTiming}"</h4>
+              <div style={{ 
+                background: '#e7f3ff', 
+                padding: '15px', 
+                borderRadius: '8px',
+                marginBottom: '15px',
+                border: '1px solid #b3d9ff'
+              }}>
+                <div style={{ marginBottom: '10px', fontSize: '1.1em', fontWeight: '500' }}>
+                  Ready to save {formatTime(getFinalTime())} to "{taskForTiming}"
+                </div>
+                <button 
+                  onClick={autoSaveToTimedTask}
+                  className="btn btn-success"
+                  style={{ fontSize: '1.1em', padding: '10px 20px' }}
+                >
+                  ✅ Save Time to "{taskForTiming}"
+                </button>
+              </div>
+              <details>
+                <summary style={{ cursor: 'pointer', color: '#6c757d' }}>Save to different task</summary>
+                <div style={{ marginTop: '10px' }}>
+                  <div className="save-time">
+                    <select 
+                      value={selectedTask}
+                      onChange={(e) => setSelectedTask(e.target.value)}
+                    >
+                      <option value="">Select different task</option>
+                      {taskList.map(task => (
+                        <option key={task.id} value={task.id}>{task.name}</option>
+                      ))}
+                    </select>
+                    <button 
+                      onClick={saveTimeToSelectedTask} 
+                      disabled={!selectedTask} 
+                      className="btn btn-secondary"
+                    >
+                      💾 Save to Selected Task
+                    </button>
+                  </div>
+                </div>
+              </details>
+            </div>
+          ) : (
+            // Show manual task selection
+            <div>
+              <h4>Save Time to Task</h4>
+              <div className="save-time">
+                <select 
+                  value={selectedTask}
+                  onChange={(e) => setSelectedTask(e.target.value)}
+                >
+                  <option value="">Select task to save time to</option>
+                  {taskList.map(task => (
+                    <option key={task.id} value={task.id}>{task.name}</option>
+                  ))}
+                </select>
+                <button 
+                  onClick={saveTimeToSelectedTask} 
+                  disabled={!selectedTask} 
+                  className="btn btn-success"
+                >
+                  💾 Save Time ({formatTime(getFinalTime())})
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}

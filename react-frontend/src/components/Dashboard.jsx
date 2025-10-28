@@ -45,7 +45,6 @@ function Dashboard() {
         loading: false
       })
     } catch (error) {
-      console.error('Error loading dashboard data:', error)
       setDashboardData(prev => ({ ...prev, loading: false }))
     }
   }, [authenticatedFetch])

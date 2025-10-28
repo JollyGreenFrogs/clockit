@@ -4,13 +4,14 @@ Includes proper data structure for client consumption
 """
 
 from datetime import datetime
-from typing import Optional, Dict, List
-from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
 
+from pydantic import BaseModel
 
 # =============================================================================
 # TASK RESPONSES
 # =============================================================================
+
 
 class TaskResponse(BaseModel):
     """Schema for individual task response"""
@@ -31,17 +32,20 @@ class TaskResponse(BaseModel):
 
 class TaskListResponse(BaseModel):
     """Schema for tasks list response"""
+
     tasks: Dict[str, float]  # task_name -> time_spent mapping
 
 
 class TasksDetailedResponse(BaseModel):
     """Schema for detailed tasks response"""
+
     tasks: Dict[str, TaskResponse]
 
 
 # =============================================================================
 # CATEGORY RESPONSES
 # =============================================================================
+
 
 class CategoryResponse(BaseModel):
     """Schema for category response"""
@@ -57,6 +61,7 @@ class CategoryResponse(BaseModel):
 
 class CategoriesListResponse(BaseModel):
     """Schema for categories list response"""
+
     categories: List[CategoryResponse]
 
 
@@ -64,9 +69,10 @@ class CategoriesListResponse(BaseModel):
 # TIME ENTRY RESPONSES
 # =============================================================================
 
+
 class TimeEntryResponse(BaseModel):
     """Schema for time entry response"""
-    
+
     id: int
     task_id: int
     task_name: str
@@ -81,12 +87,14 @@ class TimeEntryResponse(BaseModel):
 
 class TimeEntriesListResponse(BaseModel):
     """Schema for time entries list response"""
+
     time_entries: List[TimeEntryResponse]
 
 
 # =============================================================================
 # CONFIGURATION RESPONSES
 # =============================================================================
+
 
 class ConfigResponse(BaseModel):
     """Schema for configuration response"""
@@ -98,7 +106,7 @@ class ConfigResponse(BaseModel):
 
 class CurrencyResponse(BaseModel):
     """Schema for currency response"""
-    
+
     code: str
     symbol: str
     name: str
@@ -106,12 +114,13 @@ class CurrencyResponse(BaseModel):
 
 class CurrenciesListResponse(BaseModel):
     """Schema for currencies list response"""
+
     currencies: List[CurrencyResponse]
 
 
 class RateResponse(BaseModel):
     """Schema for rate response"""
-    
+
     task_type: str
     day_rate: float
     hourly_rate: float
@@ -120,6 +129,7 @@ class RateResponse(BaseModel):
 
 class RatesListResponse(BaseModel):
     """Schema for rates list response"""
+
     rates: Dict[str, float]  # task_type -> day_rate mapping
 
 
@@ -127,9 +137,10 @@ class RatesListResponse(BaseModel):
 # ONBOARDING RESPONSES
 # =============================================================================
 
+
 class OnboardingStatus(BaseModel):
     """Schema for onboarding status response"""
-    
+
     onboarding_completed: bool
     default_category: Optional[str]
     needs_onboarding: bool
@@ -137,7 +148,7 @@ class OnboardingStatus(BaseModel):
 
 class OnboardingCompletionResponse(BaseModel):
     """Schema for onboarding completion response"""
-    
+
     message: str
     default_category: str
     categories_created: int
@@ -147,9 +158,10 @@ class OnboardingCompletionResponse(BaseModel):
 # INVOICE RESPONSES
 # =============================================================================
 
+
 class InvoiceItemResponse(BaseModel):
     """Schema for individual invoice item"""
-    
+
     task: str
     total_hours: float
     day_rate: str
@@ -160,14 +172,14 @@ class InvoiceItemResponse(BaseModel):
 
 class InvoicePreviewResponse(BaseModel):
     """Schema for invoice preview response"""
-    
+
     preview: str
     status: str
 
 
 class InvoiceGenerationResponse(BaseModel):
     """Schema for invoice generation response"""
-    
+
     date: str
     currency: Dict[str, str]
     items: List[InvoiceItemResponse]
@@ -179,9 +191,10 @@ class InvoiceGenerationResponse(BaseModel):
 # SYSTEM RESPONSES
 # =============================================================================
 
+
 class HealthCheckResponse(BaseModel):
     """Schema for health check response"""
-    
+
     status: str
     timestamp: str
     version: str
@@ -193,7 +206,7 @@ class HealthCheckResponse(BaseModel):
 
 class SystemDataLocationResponse(BaseModel):
     """Schema for system data location response"""
-    
+
     database_type: str
     data_storage: str
     data_directory: str
@@ -202,7 +215,7 @@ class SystemDataLocationResponse(BaseModel):
 
 class VersionResponse(BaseModel):
     """Schema for version response"""
-    
+
     version: str
     build: Optional[str]
     environment: Optional[str]
@@ -211,6 +224,7 @@ class VersionResponse(BaseModel):
 # =============================================================================
 # GENERIC API RESPONSES
 # =============================================================================
+
 
 class SuccessResponse(BaseModel):
     """Schema for success responses"""
@@ -230,13 +244,13 @@ class ErrorResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Schema for simple message responses"""
-    
+
     message: str
 
 
 class StatusResponse(BaseModel):
     """Schema for status responses"""
-    
+
     status: str
     message: Optional[str] = None
 
@@ -245,9 +259,10 @@ class StatusResponse(BaseModel):
 # AUTHENTICATION RESPONSES (if needed)
 # =============================================================================
 
+
 class TokenResponse(BaseModel):
     """Schema for authentication token response"""
-    
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -256,7 +271,7 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """Schema for user information response"""
-    
+
     id: str
     username: str
     email: str
