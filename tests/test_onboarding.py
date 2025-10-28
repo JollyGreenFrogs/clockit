@@ -1,7 +1,7 @@
 """Test onboarding completion functionality."""
 
-from src.database.repositories import ConfigRepository
-from src.database.models import UserConfig
+from database.repositories import ConfigRepository
+from database.models import UserConfig
 
 
 def test_onboarding_completion_saves_user_config(authenticated_client, auth_tokens: dict, test_db_session):

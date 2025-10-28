@@ -20,7 +20,7 @@ function InvoiceGeneration() {
       } else {
         setResult('Error generating preview: ' + (data.detail || 'Unknown error'))
       }
-    } catch (error) {
+    } catch {
       // Silent error handling
       setResult('Error generating preview')
     } finally {
@@ -48,7 +48,7 @@ function InvoiceGeneration() {
         const data = await response.json()
         setResult('Error generating invoice: ' + (data.detail || 'Unknown error'))
       }
-    } catch (error) {
+    } catch {
       setResult('Error generating invoice')
     } finally {
       setLoading(false)

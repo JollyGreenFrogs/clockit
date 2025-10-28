@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('refresh_token');
             setToken(null);
           }
-        } catch (error) {
+        } catch {
           // Silent token validation error handling
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }) => {
           },
         });
       }
-    } catch (error) {
+    } catch {
       // Silent logout error handling
     } finally {
       // Clear local state regardless of API call success
@@ -162,7 +162,7 @@ export const AuthProvider = ({ children }) => {
       
       setToken(data.access_token);
       return data.access_token;
-    } catch (error) {
+    } catch {
       // Silent token refresh error handling
       logout();
       return null;
@@ -221,7 +221,7 @@ export const AuthProvider = ({ children }) => {
         return true;
       }
       return false;
-    } catch (error) {
+    } catch {
       // Silent user data refresh error handling
       return false;
     }
@@ -242,7 +242,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
       return null;
-    } catch (error) {
+    } catch {
       // Silent onboarding status error handling
       return null;
     }

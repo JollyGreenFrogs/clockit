@@ -38,7 +38,8 @@ function EnhancedTaskManager({ onTasksChange, tasks: externalTasks }) {
         const tasksArray = Object.values(tasksData)
         setTasks(tasksArray)
       }
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 
@@ -51,7 +52,8 @@ function EnhancedTaskManager({ onTasksChange, tasks: externalTasks }) {
         const categoriesArray = data.categories.map(cat => cat.name)
         setCategories(categoriesArray)
       }
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 
@@ -111,7 +113,7 @@ function EnhancedTaskManager({ onTasksChange, tasks: externalTasks }) {
         const errorData = await response.json()
         setResult(errorData.detail || 'Error creating task')
       }
-    } catch (error) {
+    } catch {
       setResult('Error creating task')
     } finally {
       setLoading(false)
@@ -137,7 +139,8 @@ function EnhancedTaskManager({ onTasksChange, tasks: externalTasks }) {
         setNewCategoryName('')
         setShowNewCategory(false)
       }
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 

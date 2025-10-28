@@ -32,7 +32,7 @@ class Config:
 
     # Database configuration (for future cloud deployment)
     DATABASE_URL = os.environ.get("DATABASE_URL")
-    DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "file")  # 'file' or 'postgres'
+    DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgres")  # 'file' or 'postgres'
 
     # PostgreSQL specific settings (when DATABASE_TYPE='postgres')
     POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")

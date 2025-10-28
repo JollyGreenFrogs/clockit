@@ -128,13 +128,13 @@ function Onboarding() {
               errorMessage = JSON.stringify(data.detail)
             }
           }
-        } catch (jsonError) {
+        } catch {
           errorMessage = `HTTP ${response.status}: ${response.statusText}`
         }
         
         setError(errorMessage)
       }
-    } catch (error) {
+    } catch {
       setError('Network error during onboarding')
     } finally {
       setLoading(false)

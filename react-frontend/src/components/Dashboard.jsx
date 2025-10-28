@@ -44,7 +44,7 @@ function Dashboard() {
         currency,
         loading: false
       })
-    } catch (error) {
+    } catch {
       setDashboardData(prev => ({ ...prev, loading: false }))
     }
   }, [authenticatedFetch])

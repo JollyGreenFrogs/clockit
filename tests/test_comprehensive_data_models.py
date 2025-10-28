@@ -32,7 +32,7 @@ class TestRequestModels:
         # Test hours validation - negative
         with pytest.raises(ValidationError) as exc_info:
             TimeEntry(hours=-1.0, date=datetime.now())
-        assert "greater than 0" in str(exc_info.value)
+        assert "greater than or equal to 0.000001" in str(exc_info.value)
 
     def test_time_entry_xss_protection(self):
         """Test that TimeEntry sanitizes potentially dangerous input"""

@@ -28,7 +28,8 @@ function RateConfiguration() {
           setCurrencySymbol(data.currency.symbol)
         }
       }
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 
@@ -44,13 +45,12 @@ function RateConfiguration() {
       // Check content type
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text()
         return
       }
       
       const data = await response.json()
       setCurrencies(data.currencies || [])
-    } catch (error) {
+    } catch {
       // No fallback currencies - show error state instead
       setCurrencies([])
     }
@@ -83,7 +83,8 @@ function RateConfiguration() {
             symbol = currentCurrency.symbol
           }
         }
-      } catch (currencyError) {
+      } catch {
+        // Handle currency error silently
       }
       
       // Convert categories to rates format for display - show all categories
@@ -96,7 +97,8 @@ function RateConfiguration() {
         }))
       
       setRates(ratesArray)
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 
@@ -133,19 +135,20 @@ function RateConfiguration() {
         const errorData = await response.json()
         setResult(`Error creating category: ${errorData.detail || 'Unknown error'}`)
       }
-    } catch (error) {
+    } catch {
       setResult('Error creating category')
     } finally {
       setLoading(false)
     }
   }
 
-  const deleteRate = async (categoryId) => {
+  const deleteRate = async () => {
     try {
       // For now, let's just reload the data since we don't have a delete endpoint yet
       // TODO: Implement category deletion endpoint
       await loadRates()
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }
 

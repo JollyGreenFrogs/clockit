@@ -78,7 +78,7 @@ function ContactForm({ onClose }) {
         const errorData = await response.json()
         setResult(`Error: ${errorData.detail || 'Failed to send message'}`)
       }
-    } catch (error) {
+    } catch {
       setResult('Error: Failed to send message. Please try again.')
     } finally {
       setLoading(false)

@@ -54,7 +54,7 @@ function AppContent() {
         const tasksArray = data.tasks ? Object.values(data.tasks) : []
         setTasks(tasksArray)
       }
-    } catch (error) {
+    } catch {
       // Silent error handling for production
     }
   }, [authenticatedFetch])
@@ -67,10 +67,6 @@ function AppContent() {
   }, [isAuthenticated, loadTasks])
 
   const handleSaveToTask = async (taskId, timeToSave) => {
-    // Find the task before saving
-    const taskBefore = tasks.find(t => t.id === parseInt(taskId))
-    const timeBefore = taskBefore ? taskBefore.time_spent : 0
-    
     // Convert ms to hours and round to 6 decimal places to avoid precision issues
     let timeToAdd = Math.round((timeToSave / (1000 * 60 * 60)) * 1000000) / 1000000
     
@@ -97,16 +93,10 @@ function AppContent() {
       if (timeResponse.ok) {
         await loadTasks() // This will update the tasks state
         
-        // Find the task after saving to show the updated time
-        setTimeout(() => {
-          const taskAfter = tasks.find(t => t.id === parseInt(taskId))
-          const timeAfter = taskAfter ? taskAfter.time_spent : 0
-        }, 100) // Small delay to let state update
-        
       } else {
-        const errorText = await timeResponse.text()
+        // Handle error silently in production
       }
-    } catch (error) {
+    } catch {
       // Silent error handling for production
     }
   }

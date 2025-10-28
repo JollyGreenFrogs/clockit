@@ -22,7 +22,7 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
       } else {
         setError('Failed to load time entries')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to load time entries')
     } finally {
       setLoading(false)
@@ -37,7 +37,8 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
         // Use the categories array directly from the API response
         setCategories(data.categories || [])
       }
-    } catch (error) {
+    } catch {
+      // Handle error silently
     }
   }, [authenticatedFetch])
 
@@ -66,7 +67,7 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
       } else {
         setError('Failed to update task category')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to update task category')
     } finally {
       setLoading(false)
@@ -90,7 +91,7 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
       } else {
         setError('Failed to delete time entry')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to delete time entry')
     } finally {
       setLoading(false)
@@ -114,7 +115,7 @@ function TaskAuditModal({ task, isOpen, onClose, onTaskUpdate }) {
       } else {
         setError('Failed to update time entry')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to update time entry')
     } finally {
       setLoading(false)

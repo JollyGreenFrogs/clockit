@@ -39,7 +39,7 @@ function ManualTimeEntry({ tasks, onTimeAdded }) {
         setResult(errorData.detail || 'Error adding time entry')
         setTimeout(() => setResult(''), 5000)
       }
-    } catch (error) {
+    } catch {
       setResult('Error adding time entry')
       setTimeout(() => setResult(''), 3000)
     }

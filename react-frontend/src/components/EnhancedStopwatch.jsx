@@ -130,12 +130,6 @@ function EnhancedStopwatch({ onTimeUpdate, tasks, onSaveToTask }) {
     const task = taskList.find(t => t.name === taskName)
     return task ? task.id : null
   }
-  
-  // Helper function to find task name by ID
-  const getTaskNameById = (taskId) => {
-    const task = taskList.find(t => t.id === parseInt(taskId))
-    return task ? task.name : ''
-  }
 
   return (
     <div className="stopwatch-widget">

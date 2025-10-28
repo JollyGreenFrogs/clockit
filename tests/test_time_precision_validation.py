@@ -8,7 +8,7 @@ are properly validated and saved without being truncated to 0.
 import pytest
 from pydantic import ValidationError
 
-from src.data_models.requests import TimeEntry, TimeEntryCreate, TimeEntryUpdate
+from data_models.requests import TimeEntry, TimeEntryCreate, TimeEntryUpdate
 
 
 class TestTimePrecisionValidation:
@@ -226,4 +226,3 @@ if __name__ == "__main__":
     test.test_minimum_validation_boundary()
     test.test_realistic_timer_scenarios()
     test.test_precision_rounding_consistency()
-    print("✅ All precision validation tests passed!")
