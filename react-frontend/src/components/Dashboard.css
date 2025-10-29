@@ -496,7 +496,7 @@
 
 @media (max-width: 480px) {
   .dashboard {
-    padding: 12px 8px;
+    padding: 12px 12px;
   }
   
   .dashboard-header {
@@ -548,12 +548,12 @@
   
   .config-item {
     padding: 14px;
-    gap: 6px;
+    gap: 10px;
   }
   
   .task-summary {
     padding: 14px;
-    gap: 6px;
+    gap: 10px;
   }
   
   .empty-state {
