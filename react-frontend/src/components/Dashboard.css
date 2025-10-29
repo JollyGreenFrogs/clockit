@@ -418,57 +418,154 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .dashboard {
-    padding: 1rem;
+    padding: 16px 12px;
+  }
+  
+  .dashboard-header {
+    margin-bottom: 24px;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+  
+  .dashboard-subtitle {
+    font-size: 1.1rem;
   }
   
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 12px;
   }
   
   .stat-card {
-    padding: 1rem;
+    padding: 16px;
+    border-radius: 8px;
   }
   
   .stat-value {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+  }
+  
+  .stat-label {
+    font-size: 0.9rem;
   }
   
   .dashboard-section {
-    padding: 1rem;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .dashboard-section h3 {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
   }
   
   .quick-actions {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .action-card {
+    padding: 16px;
   }
   
   .config-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 8px;
+    padding: 16px;
   }
   
   .task-summary {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 8px;
+    padding: 16px;
+  }
+  
+  .empty-state {
+    padding: 24px 16px;
+  }
+  
+  .empty-state-icon {
+    font-size: 2.5rem;
   }
 }
 
 @media (max-width: 480px) {
+  .dashboard {
+    padding: 12px 8px;
+  }
+  
+  .dashboard-header {
+    margin-bottom: 20px;
+  }
+  
   .dashboard-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+    line-height: 1.2;
   }
   
   .dashboard-subtitle {
     font-size: 1rem;
   }
   
+  .dashboard-icon {
+    font-size: 1.2em;
+  }
+  
+  .stat-card {
+    padding: 14px;
+  }
+  
   .stat-icon {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
   
   .stat-value {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
+  }
+  
+  .stat-label {
+    font-size: 0.85rem;
+  }
+  
+  .dashboard-section {
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  
+  .dashboard-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 14px;
+  }
+  
+  .action-card {
+    padding: 14px;
+  }
+  
+  .config-item {
+    padding: 14px;
+    gap: 6px;
+  }
+  
+  .task-summary {
+    padding: 14px;
+    gap: 6px;
+  }
+  
+  .empty-state {
+    padding: 20px 12px;
+  }
+  
+  .empty-state-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+  
+  .empty-state-text {
+    font-size: 1rem;
   }
 }
