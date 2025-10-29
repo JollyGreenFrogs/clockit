@@ -337,14 +337,88 @@
 }
 
 /* Responsive design */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .auth-container {
     padding: 16px;
+    /* Ensure proper scrolling on mobile */
+    min-height: 100vh;
+    overflow-y: auto;
   }
   
   .auth-card {
     padding: 32px 24px;
     max-width: 100%;
+    border-radius: 12px;
+    /* Better mobile spacing */
+    margin: 16px 0;
+    min-height: auto;
+  }
+  
+  .auth-header {
+    margin-bottom: 28px;
+  }
+  
+  .auth-header h2 {
+    font-size: 26px;
+    line-height: 1.2;
+  }
+  
+  .auth-header p {
+    font-size: 16px;
+    margin-top: 8px;
+  }
+  
+  .auth-form {
+    gap: 20px;
+  }
+  
+  .form-group {
+    gap: 6px;
+  }
+  
+  .form-group label {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  
+  .form-group input {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 16px;
+    min-height: 52px;
+    box-sizing: border-box;
+  }
+  
+  .auth-button {
+    padding: 18px 24px;
+    font-size: 16px;
+    min-height: 56px;
+    font-weight: 600;
+  }
+  
+  .auth-footer {
+    margin-top: 24px;
+    padding-top: 24px;
+  }
+  
+  .auth-footer p {
+    font-size: 16px;
+  }
+  
+  .link-button {
+    font-size: 16px;
+    padding: 4px 8px;
+    margin: 0 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 12px;
+  }
+  
+  .auth-card {
+    padding: 28px 20px;
+    margin: 8px 0;
     border-radius: 8px;
   }
   
@@ -352,13 +426,18 @@
     font-size: 24px;
   }
   
+  .auth-header p {
+    font-size: 15px;
+  }
+  
   .form-group input {
-    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 14px;
+    min-height: 48px;
   }
   
   .auth-button {
     padding: 16px 20px;
-    font-size: 16px;
+    min-height: 52px;
   }
 }
 
